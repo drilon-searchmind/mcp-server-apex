@@ -39,4 +39,6 @@ APEX_API_URL=https://apex.searchmind.tech npm start
 
 Get keys from **APEX Admin → MCP API Keys**.
 
-See [docs/getting-started.md](./docs/getting-started.md) for the full guide.
+**Tools:** `ping`, `list_customers`, `get_merged_sources`
+
+See [docs/endpoints.md](./docs/endpoints.md) for the full API reference and [docs/getting-started.md](./docs/getting-started.md) for setup.

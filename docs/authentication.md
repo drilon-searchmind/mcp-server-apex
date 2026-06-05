@@ -61,6 +61,12 @@ Example:
 - Keys grant read access to **all** customer data once data tools are enabled
 - The public Railway URL is useless without a valid key
 
-## APEX verify endpoint
+## APEX MCP API routes
 
-See [Endpoints](./endpoints.md#apex-verify).
+All require the same Bearer token. See [Endpoints](./endpoints.md).
+
+| Route | Purpose |
+|-------|---------|
+| `/api/mcp/auth/verify` | Validate key |
+| `/api/mcp/customers` | List customers (no secrets) |
+| `/api/mcp/merged-sources` | Daily revenue + ad spend |

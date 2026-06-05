@@ -11,39 +11,42 @@ Health metadata (no auth).
 ```json
 {
   "name": "mcp-server-apex",
+  "version": "0.2.0",
   "status": "ok",
   "mcpEndpoint": "/mcp",
   "auth": "Bearer apex_mcp_… required on POST /mcp",
-  "apexApiConfigured": true
+  "apexApiConfigured": true,
+  "tools": ["ping", "list_customers", "get_merged_sources"]
 }
 ```
 
 ### `GET /health`
 
-Plain text `ok` (no auth). For uptime checks.
+Plain text `ok` (no auth).
 
 ### `POST /mcp`
 
-**MCP Streamable HTTP endpoint.** Requires authentication.
+MCP Streamable HTTP endpoint. Requires authentication.
 
 | Header | Value |
 |--------|--------|
 | `Authorization` | `Bearer apex_mcp_…` |
 | `Content-Type` | `application/json` |
-
-Handles MCP protocol messages (initialize, tools/list, tools/call, etc.) per the [Model Context Protocol](https://modelcontextprotocol.io/).
+| `Accept` | `application/json, text/event-stream` |
 
 ---
 
 ## APEX — apex.searchmind.tech
 
+All `/api/mcp/*` data routes require:
+
+```
+Authorization: Bearer apex_mcp_…
+```
+
 ### `GET` or `POST` `/api/mcp/auth/verify`
 
-Validates an MCP API key. Called by Railway; can also be tested with curl.
-
-| Header | Value |
-|--------|--------|
-| `Authorization` | `Bearer apex_mcp_…` |
+Validates an MCP API key.
 
 **Success `200`:**
 
@@ -65,38 +68,144 @@ Validates an MCP API key. Called by Railway; can also be tested with curl.
 }
 ```
 
-### Planned APEX data endpoints
+**Example:**
 
-These will be added on APEX and called by MCP tools (same Bearer auth):
-
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/api/mcp/customers` | List customers (no secrets) |
-| `GET` | `/api/mcp/merged-sources` | Query params: `customerId`, `startDate`, `endDate` |
+```bash
+curl -H "Authorization: Bearer apex_mcp_YOUR_KEY" \
+  https://apex.searchmind.tech/api/mcp/auth/verify
+```
 
 ---
 
-## MCP tools (Railway)
+### `GET` `/api/mcp/customers`
 
-Tools exposed to AI clients via the MCP protocol.
+List customers (read-only, no API secrets).
 
-### `ping` ✅ Available
+| Query param | Type | Default | Description |
+|-------------|------|---------|-------------|
+| `includeArchived` | `1` or omit | omit | Pass `1` to include archived customers |
 
-| Field | Type | Description |
+**Success `200`:**
+
+```json
+{
+  "readOnly": true,
+  "count": 2,
+  "customers": [
+    {
+      "id": "…",
+      "customerName": "Example DK",
+      "customerType": "Shopify",
+      "isArchived": false,
+      "currency": "DKK",
+      "revenueDisplayVat": "excl",
+      "integrations": {
+        "store": true,
+        "meta": true,
+        "googleAds": true,
+        "pinterest": false,
+        "snapchat": false,
+        "bing": false,
+        "reddit": false,
+        "klaviyo": false,
+        "googleSearchConsole": true,
+        "ga4": true
+      }
+    }
+  ]
+}
+```
+
+**Example:**
+
+```bash
+curl -H "Authorization: Bearer apex_mcp_YOUR_KEY" \
+  "https://apex.searchmind.tech/api/mcp/customers"
+```
+
+---
+
+### `GET` `/api/mcp/merged-sources`
+
+Daily merged revenue + ad spend for one customer (same data shape as dashboards).
+
+| Query param | Required | Format | Description |
+|-------------|----------|--------|-------------|
+| `customerId` | Yes | MongoDB id | APEX customer id |
+| `startDate` | Yes | `YYYY-MM-DD` | Inclusive start |
+| `endDate` | Yes | `YYYY-MM-DD` | Inclusive end |
+
+**Limits:** max **366 days** per request.
+
+**Success `200`:** JSON object including:
+
+| Field | Description |
+|-------|-------------|
+| `readOnly` | Always `true` |
+| `customerId`, `customerName`, `customerType` | Customer context |
+| `startDate`, `endDate` | Requested range |
+| `shopifyDaily` | Daily store revenue rows (all platforms use this key) |
+| `facebookDaily`, `googleDaily`, … | Daily ad platform spend |
+| `grossProfitNetSales`, `POASTotalSales`, `CACTotalSales` | Period totals |
+| `calculationsData` | Breakdown strings used in dashboards |
+
+**Errors:**
+
+| Status | Reason |
+|--------|--------|
+| `400` | Missing params, invalid dates, range > 366 days |
+| `401` | Invalid MCP key |
+| `404` | Customer not found |
+| `500` | Fetch error |
+
+**Example:**
+
+```bash
+curl -H "Authorization: Bearer apex_mcp_YOUR_KEY" \
+  "https://apex.searchmind.tech/api/mcp/merged-sources?customerId=CUSTOMER_ID&startDate=2025-06-01&endDate=2025-06-30"
+```
+
+---
+
+## MCP tools (via `POST /mcp`)
+
+Registered on the Railway MCP server. AI clients call these through the MCP protocol.
+
+### `ping`
+
+Verify connectivity.
+
+| Input | Type | Description |
 |-------|------|-------------|
-| `message` | string (optional) | Echoed in the response |
+| `message` | string (optional) | Echoed in response |
 
 **Returns:** `pong` or `pong: {message}`
 
-**Example prompt:** “Use apex ping with message test”
+---
 
-### `list_customers` 🔜 Planned
+### `list_customers`
 
-List all APEX customers (id, name, type, integrations summary).
+Calls `GET /api/mcp/customers` on APEX.
 
-### `get_merged_sources` 🔜 Planned
+| Input | Type | Description |
+|-------|------|-------------|
+| `includeArchived` | boolean (optional) | Include archived customers |
 
-Daily merged revenue + ad spend for a customer and date range (same shape as dashboards).
+**Example prompt:** “Use apex list_customers”
+
+---
+
+### `get_merged_sources`
+
+Calls `GET /api/mcp/merged-sources` on APEX.
+
+| Input | Type | Description |
+|-------|------|-------------|
+| `customerId` | string | APEX customer id |
+| `startDate` | string | `YYYY-MM-DD` |
+| `endDate` | string | `YYYY-MM-DD` |
+
+**Example prompt:** “Use get_merged_sources for customer X from 2025-06-01 to 2025-06-30”
 
 ---
 
@@ -106,4 +215,4 @@ Daily merged revenue + ad spend for a customer and date range (same shape as das
 |----------|---------|
 | `/admin` → **MCP API Keys** | Generate, list, revoke keys |
 
-Not an HTTP API — browser UI for admins only.
+Not a public HTTP API — browser UI for admins only.

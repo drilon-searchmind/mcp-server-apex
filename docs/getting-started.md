@@ -15,39 +15,23 @@ curl -H "Authorization: Bearer apex_mcp_YOUR_KEY" \
   https://apex.searchmind.tech/api/mcp/auth/verify
 ```
 
-Expected response:
+## 3. Test APEX data endpoints (optional)
 
-```json
-{
-  "valid": true,
-  "readOnly": true,
-  "scope": "all",
-  "keyId": "..."
-}
+**List customers:**
+
+```bash
+curl -H "Authorization: Bearer apex_mcp_YOUR_KEY" \
+  https://apex.searchmind.tech/api/mcp/customers
 ```
 
-## 3. Connect Claude Code
+**Merged sources** (replace `CUSTOMER_ID` and dates):
 
-Add the remote MCP server with your Bearer token. Example config:
-
-```json
-{
-  "mcpServers": {
-    "apex": {
-      "url": "https://mcp-server-apex-production.up.railway.app/mcp",
-      "headers": {
-        "Authorization": "Bearer apex_mcp_YOUR_KEY"
-      }
-    }
-  }
-}
+```bash
+curl -H "Authorization: Bearer apex_mcp_YOUR_KEY" \
+  "https://apex.searchmind.tech/api/mcp/merged-sources?customerId=CUSTOMER_ID&startDate=2025-06-01&endDate=2025-06-30"
 ```
 
-Use the exact config file location for your Claude Code / Cursor version (see their MCP docs).
-
-## 4. Connect Cursor
-
-In Cursor MCP settings (`.cursor/mcp.json` or UI), add:
+## 4. Connect Claude Code or Cursor
 
 ```json
 {
@@ -62,19 +46,27 @@ In Cursor MCP settings (`.cursor/mcp.json` or UI), add:
 }
 ```
 
-## 5. Test in the AI client
+## 5. Example prompts
 
-Ask the assistant to use the `ping` tool, for example:
-
-> Use the apex MCP ping tool with message "hello"
-
-Expected result: `pong: hello` or `pong`.
+| Goal | Prompt |
+|------|--------|
+| Connectivity | “Use the apex ping tool” |
+| Customers | “List all APEX customers using list_customers” |
+| Performance data | “Use get_merged_sources for customer `{id}` from 2025-06-01 to 2025-06-30” |
 
 ## 6. Revoke a key
 
-Admin → MCP API Keys → **Revoke** on the key row. The key stops working on the next MCP request.
+Admin → MCP API Keys → **Revoke**. The key stops working immediately.
 
 ## Local development
+
+**APEX** (main repo):
+
+```bash
+npm run dev
+```
+
+**MCP server:**
 
 ```bash
 cd mcp-server-apex
@@ -82,4 +74,6 @@ npm install
 APEX_API_URL=http://localhost:3000 npm start
 ```
 
-Generate a key against your local APEX instance (with MongoDB connected), then point your MCP client at `http://localhost:3000/mcp` with the same Bearer header.
+Generate a key against local APEX, then point your MCP client at `http://localhost:3000/mcp` with the Bearer header.
+
+See [Endpoints](./endpoints.md) for the full API reference.

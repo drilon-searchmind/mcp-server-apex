@@ -4,9 +4,9 @@ Remote MCP server for AI tools (Claude Code, Cursor, and other MCP clients) to a
 
 | Document | Description |
 |----------|-------------|
-| [Getting started](./getting-started.md) | API keys, client setup, first test |
-| [Authentication](./authentication.md) | How keys work and how verification flows |
-| [Endpoints](./endpoints.md) | Railway + APEX HTTP endpoints and MCP tools |
+| [Getting started](./getting-started.md) | API keys, client setup, example prompts |
+| [Authentication](./authentication.md) | How keys work and verification flow |
+| [Endpoints](./endpoints.md) | **Full API reference** — Railway + APEX + MCP tools |
 
 ## Architecture
 
@@ -14,13 +14,12 @@ Remote MCP server for AI tools (Claude Code, Cursor, and other MCP clients) to a
 AI client (Claude Code / Cursor)
         │  Authorization: Bearer apex_mcp_…
         ▼
-mcp-server-apex (Railway)
-        │  verifies key via APEX
+mcp-server-apex (Railway)  — tools: ping, list_customers, get_merged_sources
+        │  same Bearer token
         ▼
 apex.searchmind.tech (/api/mcp/…)
-        │  read-only data APIs (coming soon)
         ▼
-Customers, merged sources, dashboards data
+MongoDB + Shopify/Meta/Google/store APIs
 ```
 
 ## Production URLs
@@ -31,19 +30,27 @@ Customers, merged sources, dashboards data
 | MCP endpoint | `https://mcp-server-apex-production.up.railway.app/mcp` |
 | APEX app | `https://apex.searchmind.tech` |
 
-## Access model
+## APEX MCP API summary
 
-- Keys are created in **APEX Admin → MCP API Keys**
-- Each key is **read-only** with access to **all customers**
-- Keys are shown **once** at creation — store them securely
-- Revoked keys stop working immediately
+| Method | Endpoint | Auth |
+|--------|----------|------|
+| GET/POST | `/api/mcp/auth/verify` | Bearer |
+| GET | `/api/mcp/customers` | Bearer |
+| GET | `/api/mcp/merged-sources` | Bearer |
 
-## Current MCP tools
+All routes are **read-only**. Details in [Endpoints](./endpoints.md).
+
+## MCP tools
 
 | Tool | Status |
 |------|--------|
 | `ping` | Available |
-| `list_customers` | Planned |
-| `get_merged_sources` | Planned |
+| `list_customers` | Available |
+| `get_merged_sources` | Available |
 
-See [Endpoints](./endpoints.md) for details.
+## Access model
+
+- Keys created in **APEX Admin → MCP API Keys**
+- **Read-only**, all customers
+- Shown **once** at creation — store securely
+- Revoke anytime in Admin

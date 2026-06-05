@@ -3,41 +3,32 @@ import { randomUUID } from "node:crypto";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import express from "express";
-import { z } from "zod";
 
-import { authenticateMcpRequest, getApexApiUrl } from "./apexAuth.js";
+import {
+  authenticateMcpRequest,
+  getApexApiUrl,
+  parseBearerToken,
+} from "./apexAuth.js";
+import { registerApexTools } from "./tools.js";
 
 const PORT = Number(process.env.PORT) || 3000;
 
-function createServer() {
+/**
+ * @param {string} bearerToken
+ */
+function createServer(bearerToken) {
   const server = new McpServer(
     {
       name: "mcp-server-apex",
-      version: "0.1.0",
+      version: "0.2.0",
     },
     {
       instructions:
-        "Searchmind APEX MCP server (read-only). Requires a valid apex_mcp API key. Use ping to verify connectivity.",
+        "Searchmind APEX MCP server (read-only). Tools: ping, list_customers, get_merged_sources. Requires apex_mcp API key.",
     }
   );
 
-  server.registerTool(
-    "ping",
-    {
-      title: "Ping",
-      description: "Returns a pong response to verify the server is reachable.",
-      inputSchema: z.object({
-        message: z.string().optional().describe("Optional message to echo back"),
-      }),
-    },
-    async ({ message }) => {
-      const text = message ? `pong: ${message}` : "pong";
-      return {
-        content: [{ type: "text", text }],
-      };
-    }
-  );
-
+  registerApexTools(server, bearerToken);
   return server;
 }
 
@@ -72,10 +63,12 @@ app.get("/", (_req, res) => {
 
   res.json({
     name: "mcp-server-apex",
+    version: "0.2.0",
     status: "ok",
     mcpEndpoint: "/mcp",
     auth: "Bearer apex_mcp_… required on POST /mcp",
     apexApiConfigured: apexConfigured,
+    tools: ["ping", "list_customers", "get_merged_sources"],
   });
 });
 
@@ -84,13 +77,20 @@ app.get("/health", (_req, res) => {
 });
 
 app.post("/mcp", async (req, res) => {
+  let bearerToken;
   try {
     req.mcpAuth = await authenticateMcpRequest(req);
+    bearerToken = parseBearerToken(req);
+    if (!bearerToken) {
+      throw Object.assign(new Error("Missing Authorization Bearer token"), {
+        status: 401,
+      });
+    }
   } catch (err) {
     return authErrorResponse(res, err);
   }
 
-  const server = createServer();
+  const server = createServer(bearerToken);
 
   try {
     const transport = new StreamableHTTPServerTransport({
