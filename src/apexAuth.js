@@ -1,6 +1,8 @@
 /**
- * Validates MCP Bearer tokens against the APEX verify endpoint.
+ * Validates MCP Bearer tokens (API keys via APEX, OAuth JWT locally).
  */
+
+import { looksLikeJwt, verifyMcpOAuthJwt } from "./jwt.js";
 
 /**
  * @param {import("express").Request} req
@@ -49,7 +51,7 @@ export async function verifyKeyWithApex(bearerToken) {
       error:
         data.error ||
         (res.status === 401
-          ? "Invalid or revoked MCP API key"
+          ? "Invalid or revoked MCP credentials"
           : `APEX verify failed (${res.status})`),
     };
   }
@@ -63,9 +65,32 @@ export async function verifyKeyWithApex(bearerToken) {
 }
 
 /**
+ * @param {string} token
+ */
+async function verifyOAuthJwtToken(token) {
+  const payload = verifyMcpOAuthJwt(token);
+  if (!payload?.keyId) {
+    return { valid: false, error: "Invalid OAuth access token" };
+  }
+
+  const apex = await verifyKeyWithApex(token);
+  if (!apex.valid) {
+    return apex;
+  }
+
+  return {
+    valid: true,
+    readOnly: true,
+    scope: "all",
+    keyId: payload.keyId,
+    authMethod: "oauth",
+  };
+}
+
+/**
  * Authenticate an incoming MCP HTTP request.
  * @param {import("express").Request} req
- * @returns {Promise<{ readOnly: boolean, scope: string, keyId: string }>}
+ * @returns {Promise<{ readOnly: boolean, scope: string, keyId: string, authMethod?: string }>}
  */
 export async function authenticateMcpRequest(req) {
   const token = parseBearerToken(req);
@@ -78,18 +103,22 @@ export async function authenticateMcpRequest(req) {
 
   let result;
   try {
-    result = await verifyKeyWithApex(token);
+    if (looksLikeJwt(token)) {
+      result = await verifyOAuthJwtToken(token);
+    } else {
+      result = await verifyKeyWithApex(token);
+    }
   } catch (e) {
-    console.error("[mcp auth] APEX verify request failed:", e);
+    console.error("[mcp auth] verify request failed:", e);
     throw Object.assign(
-      new Error("Could not verify MCP API key with APEX"),
+      new Error("Could not verify MCP credentials with APEX"),
       { status: 502 }
     );
   }
 
   if (!result.valid) {
     throw Object.assign(
-      new Error(result.error || "Invalid or revoked MCP API key"),
+      new Error(result.error || "Invalid or revoked MCP credentials"),
       { status: 401 }
     );
   }
@@ -98,5 +127,6 @@ export async function authenticateMcpRequest(req) {
     readOnly: result.readOnly !== false,
     scope: result.scope || "all",
     keyId: result.keyId || "",
+    authMethod: result.authMethod || "api_key",
   };
 }

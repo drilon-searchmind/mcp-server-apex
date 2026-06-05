@@ -33,6 +33,10 @@ curl -H "Authorization: Bearer apex_mcp_YOUR_KEY" \
 
 ## 4. Connect Claude Code or Cursor
 
+**Claude MCP connector (OAuth):** use MCP URL + OAuth Client ID + Secret from step 1. See [Claude connector OAuth](./claude-connector-oauth.md).
+
+**CLI / Cursor (Bearer header):**
+
 ```json
 {
   "mcpServers": {

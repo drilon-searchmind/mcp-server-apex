@@ -1,5 +1,11 @@
 import { getApexApiUrl } from "./apexAuth.js";
 
+function getMcpServiceSecret() {
+  const s = String(process.env.MCP_SERVICE_SECRET || "").trim();
+  if (!s) throw new Error("MCP_SERVICE_SECRET is not configured");
+  return s;
+}
+
 /**
  * @param {string} bearerToken
  * @param {string} path - e.g. /api/mcp/customers
@@ -40,6 +46,29 @@ export async function apexGet(bearerToken, path, query = {}) {
   }
 
   return data;
+}
+
+/**
+ * @param {{ clientId: string, clientSecret?: string }} body
+ */
+export async function apexVerifyOAuthClient(body) {
+  const base = getApexApiUrl();
+  const res = await fetch(`${base}/api/mcp/oauth/verify-client`, {
+    method: "POST",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+      "X-MCP-Service-Key": getMcpServiceSecret(),
+    },
+    body: JSON.stringify(body),
+    cache: "no-store",
+  });
+
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || !data.valid) {
+    return { valid: false, error: data.error || "Invalid OAuth client" };
+  }
+  return { valid: true, ...data };
 }
 
 /**

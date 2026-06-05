@@ -2,33 +2,34 @@
 
 ## Overview
 
-MCP access uses **API keys** (not APEX user login / NextAuth). Keys are machine-to-machine credentials for AI clients.
+Two auth modes:
 
-| Property | Value |
-|----------|--------|
-| Key prefix | `apex_mcp_` |
-| Storage | bcrypt hash in MongoDB (`McpApiKey` collection) |
-| Access | Read-only, all customers |
-| Issuance | APEX Admin → MCP API Keys |
+1. **API key (Bearer)** — Claude Code CLI, Cursor, curl
+2. **OAuth 2.0** — Claude MCP connector (Google `@searchmind.dk` + pre-issued client id/secret)
 
-## Request flow
+Credentials are issued in **APEX Admin → MCP API Keys** (API key + OAuth client id/secret per row).
 
-1. AI client sends `POST` to Railway `/mcp` with:
+| Property | API key | OAuth |
+|----------|---------|-------|
+| Prefix | `apex_mcp_` | `apex_oauth_` / `apex_oauth_secret_` |
+| Storage | bcrypt in MongoDB | Same `McpApiKey` document |
+| Access | Read-only, all customers | Same |
 
-   ```
-   Authorization: Bearer apex_mcp_…
-   ```
+See [Claude connector OAuth](./claude-connector-oauth.md) for connector setup.
 
-2. **mcp-server-apex** forwards that token to APEX:
+## API key flow
 
-   ```
-   GET https://apex.searchmind.tech/api/mcp/auth/verify
-   Authorization: Bearer apex_mcp_…
-   ```
+1. Client sends `POST` to Railway `/mcp` with `Authorization: Bearer apex_mcp_…`
+2. **mcp-server-apex** verifies via APEX `GET /api/mcp/auth/verify`
+3. If valid → MCP session proceeds
 
-3. APEX validates the hash, checks revocation, updates `lastUsedAt`
+## OAuth flow
 
-4. If valid → MCP session proceeds. If not → `401 Unauthorized`
+1. Claude reads `/.well-known/oauth-authorization-server` on the MCP host
+2. User authorizes at `/oauth/authorize` (PKCE + Google login)
+3. Claude exchanges code at `POST /oauth/token` with client id + secret
+4. MCP server returns a JWT; subsequent `/mcp` requests use `Authorization: Bearer <jwt>`
+5. APEX validates JWT signature + linked key not revoked
 
 ## Error responses (Railway `/mcp`)
 
@@ -52,6 +53,12 @@ Example:
 | Variable | Required | Example |
 |----------|----------|---------|
 | `APEX_API_URL` | Yes | `https://apex.searchmind.tech` |
+| `MCP_PUBLIC_URL` | Yes (OAuth) | `https://mcp-server-apex-production.up.railway.app` |
+| `MCP_SERVICE_SECRET` | Yes (OAuth) | Shared with APEX |
+| `MCP_OAUTH_JWT_SECRET` | Yes (OAuth) | ≥32 chars, shared with APEX |
+| `GOOGLE_CLIENT_ID` | Yes (OAuth) | Google OAuth web client |
+| `GOOGLE_CLIENT_SECRET` | Yes (OAuth) | |
+| `ALLOWED_EMAIL_DOMAIN` | No | `searchmind.dk` |
 | `PORT` | Auto (Railway) | `8080` |
 
 ## Security notes

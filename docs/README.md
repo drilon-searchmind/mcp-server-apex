@@ -5,7 +5,8 @@ Remote MCP server for AI tools (Claude Code, Cursor, and other MCP clients) to a
 | Document | Description |
 |----------|-------------|
 | [Getting started](./getting-started.md) | API keys, client setup, example prompts |
-| [Authentication](./authentication.md) | How keys work and verification flow |
+| [Authentication](./authentication.md) | API keys + OAuth verification flow |
+| [Claude connector OAuth](./claude-connector-oauth.md) | Claude MCP connector setup |
 | [Endpoints](./endpoints.md) | **Full API reference** — Railway + APEX + MCP tools |
 
 ## Architecture

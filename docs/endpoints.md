@@ -11,10 +11,11 @@ Health metadata (no auth).
 ```json
 {
   "name": "mcp-server-apex",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "status": "ok",
   "mcpEndpoint": "/mcp",
-  "auth": "Bearer apex_mcp_… required on POST /mcp",
+  "oauthDiscovery": "/.well-known/oauth-authorization-server",
+  "auth": "OAuth (Claude connector) or Bearer apex_mcp_… on POST /mcp",
   "apexApiConfigured": true,
   "tools": ["ping", "list_customers", "get_merged_sources"]
 }
@@ -24,13 +25,25 @@ Health metadata (no auth).
 
 Plain text `ok` (no auth).
 
+### OAuth (Claude connector)
+
+| Method | Path | Auth |
+|--------|------|------|
+| GET | `/.well-known/oauth-authorization-server` | None |
+| GET | `/.well-known/oauth-protected-resource` | None |
+| GET | `/oauth/authorize` | OAuth client_id + PKCE |
+| GET | `/oauth/google/callback` | Google (internal) |
+| POST | `/oauth/token` | client_id + client_secret |
+
+See [Claude connector OAuth](./claude-connector-oauth.md).
+
 ### `POST /mcp`
 
 MCP Streamable HTTP endpoint. Requires authentication.
 
 | Header | Value |
 |--------|--------|
-| `Authorization` | `Bearer apex_mcp_…` |
+| `Authorization` | `Bearer apex_mcp_…` or OAuth JWT |
 | `Content-Type` | `application/json` |
 | `Accept` | `application/json, text/event-stream` |
 
@@ -43,6 +56,12 @@ All `/api/mcp/*` data routes require:
 ```
 Authorization: Bearer apex_mcp_…
 ```
+
+(or OAuth JWT from the MCP server token endpoint)
+
+### `POST` `/api/mcp/oauth/verify-client`
+
+Server-to-server only (`X-MCP-Service-Key`). Used by Railway to validate OAuth client credentials.
 
 ### `GET` or `POST` `/api/mcp/auth/verify`
 

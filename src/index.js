@@ -10,6 +10,7 @@ import {
   parseBearerToken,
 } from "./apexAuth.js";
 import { registerApexTools } from "./tools.js";
+import { getPublicBaseUrl, mountOAuthRoutes } from "./oauth.js";
 
 const PORT = Number(process.env.PORT) || 3000;
 
@@ -20,11 +21,11 @@ function createServer(bearerToken) {
   const server = new McpServer(
     {
       name: "mcp-server-apex",
-      version: "0.2.0",
+      version: "0.3.0",
     },
     {
       instructions:
-        "Searchmind APEX MCP server (read-only). Tools: ping, list_customers, get_merged_sources. Requires apex_mcp API key.",
+        "Searchmind APEX MCP server (read-only). Tools: ping, list_customers, get_merged_sources. Auth: OAuth (Claude connector) or Bearer apex_mcp API key.",
     }
   );
 
@@ -43,6 +44,18 @@ function authErrorResponse(res, err) {
           ? "Bad gateway"
           : "Internal server error";
 
+  if (status === 401) {
+    try {
+      const base = getPublicBaseUrl();
+      res.setHeader(
+        "WWW-Authenticate",
+        `Bearer realm="mcp", authorization_uri="${base}/oauth/authorize"`
+      );
+    } catch {
+      /* MCP_PUBLIC_URL not set */
+    }
+  }
+
   return res.status(status).json({
     error: label,
     message: err?.message || label,
@@ -51,6 +64,9 @@ function authErrorResponse(res, err) {
 
 const app = express();
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+mountOAuthRoutes(app);
 
 app.get("/", (_req, res) => {
   let apexConfigured = false;
@@ -63,10 +79,11 @@ app.get("/", (_req, res) => {
 
   res.json({
     name: "mcp-server-apex",
-    version: "0.2.0",
+    version: "0.3.0",
     status: "ok",
     mcpEndpoint: "/mcp",
-    auth: "Bearer apex_mcp_… required on POST /mcp",
+    oauthDiscovery: "/.well-known/oauth-authorization-server",
+    auth: "OAuth (Claude connector) or Bearer apex_mcp_… on POST /mcp",
     apexApiConfigured: apexConfigured,
     tools: ["ping", "list_customers", "get_merged_sources"],
   });
@@ -126,5 +143,10 @@ app.listen(PORT, () => {
     console.error(`APEX API: ${getApexApiUrl()}`);
   } catch {
     console.error("APEX_API_URL is not set — MCP auth will fail");
+  }
+  try {
+    console.error(`MCP public URL: ${getPublicBaseUrl()}`);
+  } catch {
+    console.error("MCP_PUBLIC_URL is not set — OAuth will fail");
   }
 });
