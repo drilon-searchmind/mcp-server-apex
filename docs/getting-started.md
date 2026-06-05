@@ -1,0 +1,85 @@
+# Getting started
+
+## 1. Get an MCP API key
+
+1. Log in to [APEX](https://apex.searchmind.tech) as an **admin**
+2. Open **Admin → MCP API Keys**
+3. Optionally add a label (e.g. `Claude Code — team`)
+4. Click **Generate MCP key**
+5. **Copy the key immediately** — it starts with `apex_mcp_` and is never shown again
+
+## 2. Verify the key (optional)
+
+```bash
+curl -H "Authorization: Bearer apex_mcp_YOUR_KEY" \
+  https://apex.searchmind.tech/api/mcp/auth/verify
+```
+
+Expected response:
+
+```json
+{
+  "valid": true,
+  "readOnly": true,
+  "scope": "all",
+  "keyId": "..."
+}
+```
+
+## 3. Connect Claude Code
+
+Add the remote MCP server with your Bearer token. Example config:
+
+```json
+{
+  "mcpServers": {
+    "apex": {
+      "url": "https://mcp-server-apex-production.up.railway.app/mcp",
+      "headers": {
+        "Authorization": "Bearer apex_mcp_YOUR_KEY"
+      }
+    }
+  }
+}
+```
+
+Use the exact config file location for your Claude Code / Cursor version (see their MCP docs).
+
+## 4. Connect Cursor
+
+In Cursor MCP settings (`.cursor/mcp.json` or UI), add:
+
+```json
+{
+  "mcpServers": {
+    "apex": {
+      "url": "https://mcp-server-apex-production.up.railway.app/mcp",
+      "headers": {
+        "Authorization": "Bearer apex_mcp_YOUR_KEY"
+      }
+    }
+  }
+}
+```
+
+## 5. Test in the AI client
+
+Ask the assistant to use the `ping` tool, for example:
+
+> Use the apex MCP ping tool with message "hello"
+
+Expected result: `pong: hello` or `pong`.
+
+## 6. Revoke a key
+
+Admin → MCP API Keys → **Revoke** on the key row. The key stops working on the next MCP request.
+
+## Local development
+
+```bash
+cd mcp-server-apex
+npm install
+APEX_API_URL=http://localhost:3000 npm start
+```
+
+Generate a key against your local APEX instance (with MongoDB connected), then point your MCP client at `http://localhost:3000/mcp` with the same Bearer header.

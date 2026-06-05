@@ -5,6 +5,8 @@ import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/
 import express from "express";
 import { z } from "zod";
 
+import { authenticateMcpRequest, getApexApiUrl } from "./apexAuth.js";
+
 const PORT = Number(process.env.PORT) || 3000;
 
 function createServer() {
@@ -15,7 +17,7 @@ function createServer() {
     },
     {
       instructions:
-        "Searchmind APEX MCP server. Use ping to verify connectivity.",
+        "Searchmind APEX MCP server (read-only). Requires a valid apex_mcp API key. Use ping to verify connectivity.",
     }
   );
 
@@ -39,14 +41,41 @@ function createServer() {
   return server;
 }
 
+function authErrorResponse(res, err) {
+  const status = err?.status || 500;
+  const label =
+    status === 401
+      ? "Unauthorized"
+      : status === 503
+        ? "Service unavailable"
+        : status === 502
+          ? "Bad gateway"
+          : "Internal server error";
+
+  return res.status(status).json({
+    error: label,
+    message: err?.message || label,
+  });
+}
+
 const app = express();
 app.use(express.json());
 
 app.get("/", (_req, res) => {
+  let apexConfigured = false;
+  try {
+    getApexApiUrl();
+    apexConfigured = true;
+  } catch {
+    apexConfigured = false;
+  }
+
   res.json({
     name: "mcp-server-apex",
     status: "ok",
     mcpEndpoint: "/mcp",
+    auth: "Bearer apex_mcp_… required on POST /mcp",
+    apexApiConfigured: apexConfigured,
   });
 });
 
@@ -55,6 +84,12 @@ app.get("/health", (_req, res) => {
 });
 
 app.post("/mcp", async (req, res) => {
+  try {
+    req.mcpAuth = await authenticateMcpRequest(req);
+  } catch (err) {
+    return authErrorResponse(res, err);
+  }
+
   const server = createServer();
 
   try {
@@ -87,4 +122,9 @@ app.post("/mcp", async (req, res) => {
 
 app.listen(PORT, () => {
   console.error(`mcp-server-apex listening on port ${PORT}`);
+  try {
+    console.error(`APEX API: ${getApexApiUrl()}`);
+  } catch {
+    console.error("APEX_API_URL is not set — MCP auth will fail");
+  }
 });

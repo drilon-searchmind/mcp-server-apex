@@ -1,33 +1,42 @@
 # mcp-server-apex
 
-MCP server for Searchmind APEX, deployed as a remote Streamable HTTP service.
+MCP server for Searchmind APEX, deployed on Railway as a remote Streamable HTTP service.
 
-## Local development
+**Documentation:** [docs/README.md](./docs/README.md)
+
+## Quick start
 
 ```bash
 npm install
-npm start
+APEX_API_URL=https://apex.searchmind.tech npm start
 ```
 
-Health check: `http://localhost:3000/health`  
-MCP endpoint: `http://localhost:3000/mcp`
+| Endpoint | Auth |
+|----------|------|
+| `GET /health` | None |
+| `POST /mcp` | `Authorization: Bearer apex_mcp_…` |
 
-## Railway
+## Railway environment
 
-Railway auto-detects this as a Node.js app via `package.json` and runs `npm start`.
+| Variable | Example |
+|----------|---------|
+| `APEX_API_URL` | `https://apex.searchmind.tech` |
 
-Set any required environment variables in the Railway dashboard before deploying.
-
-## Connect from Cursor
-
-Add to your MCP config:
+## Connect from Cursor / Claude Code
 
 ```json
 {
   "mcpServers": {
     "apex": {
-      "url": "https://YOUR-RAILWAY-URL.up.railway.app/mcp"
+      "url": "https://mcp-server-apex-production.up.railway.app/mcp",
+      "headers": {
+        "Authorization": "Bearer apex_mcp_YOUR_KEY"
+      }
     }
   }
 }
 ```
+
+Get keys from **APEX Admin → MCP API Keys**.
+
+See [docs/getting-started.md](./docs/getting-started.md) for the full guide.
