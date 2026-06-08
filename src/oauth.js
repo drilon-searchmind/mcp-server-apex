@@ -19,14 +19,35 @@ export function getPublicBaseUrl() {
 
 function getGoogleClientId() {
   return String(
-    process.env.GOOGLE_OAUTH_CLIENT_ID || process.env.GOOGLE_CLIENT_ID || ""
+    process.env.GOOGLE_OAUTH_CLIENT_ID ||
+      process.env.GOOGLE_CLIENT_ID ||
+      process.env.SSO_GOOGLE_CLIENT_ID ||
+      ""
   ).trim();
 }
 
 function getGoogleClientSecret() {
   return String(
-    process.env.GOOGLE_OAUTH_CLIENT_SECRET || process.env.GOOGLE_CLIENT_SECRET || ""
+    process.env.GOOGLE_OAUTH_CLIENT_SECRET ||
+      process.env.GOOGLE_CLIENT_SECRET ||
+      process.env.SSO_GOOGLE_CLIENT_SECRET ||
+      ""
   ).trim();
+}
+
+function googleOAuthConfigError() {
+  const id = getGoogleClientId();
+  const secret = getGoogleClientSecret();
+  if (!id && !secret) {
+    return "Google OAuth not configured — set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET on Railway (mcp-server-apex)";
+  }
+  if (!id) {
+    return "Google OAuth not configured — GOOGLE_CLIENT_ID is missing on Railway";
+  }
+  if (!secret) {
+    return "Google OAuth not configured — GOOGLE_CLIENT_SECRET is missing on Railway (client id is set; secret is required for callback)";
+  }
+  return null;
 }
 
 function getAllowedEmailDomain() {
@@ -160,11 +181,12 @@ export function mountOAuthRoutes(app) {
         createdAt: Date.now(),
       });
 
-      const googleClientId = getGoogleClientId();
-      if (!googleClientId) {
-        return res.status(503).send("Google OAuth not configured");
+      const googleErr = googleOAuthConfigError();
+      if (googleErr) {
+        return res.status(503).send(googleErr);
       }
 
+      const googleClientId = getGoogleClientId();
       const googleRedirect = `${base}/oauth/google/callback`;
       const googleUrl = new URL("https://accounts.google.com/o/oauth2/v2/auth");
       googleUrl.searchParams.set("client_id", googleClientId);
@@ -191,13 +213,14 @@ export function mountOAuthRoutes(app) {
         return res.status(400).send("Invalid or expired OAuth state");
       }
 
+      const googleErr = googleOAuthConfigError();
+      if (googleErr) {
+        return res.status(503).send(googleErr);
+      }
+
       const googleClientId = getGoogleClientId();
       const googleClientSecret = getGoogleClientSecret();
       const base = getPublicBaseUrl();
-
-      if (!googleClientId || !googleClientSecret) {
-        return res.status(503).send("Google OAuth not configured");
-      }
 
       const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
         method: "POST",
@@ -214,7 +237,16 @@ export function mountOAuthRoutes(app) {
       const tokenData = await tokenRes.json().catch(() => ({}));
       if (!tokenRes.ok || !tokenData.access_token) {
         console.error("[oauth google token]", tokenData);
-        return res.status(502).send("Google token exchange failed");
+        const googleError = tokenData.error || "unknown";
+        const googleDesc = tokenData.error_description || "";
+        return res
+          .status(502)
+          .send(
+            `Google token exchange failed (${googleError}${googleDesc ? `: ${googleDesc}` : ""}). ` +
+              "Check Railway: GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET must be a matching pair from the same Google OAuth client, " +
+              "and that client must have redirect URI " +
+              `${base}/oauth/google/callback`
+          );
       }
 
       const userRes = await fetch("https://openidconnect.googleapis.com/v1/userinfo", {
