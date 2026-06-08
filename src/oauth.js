@@ -67,6 +67,7 @@ function oauthMetadata(base) {
     code_challenge_methods_supported: ["S256"],
     scopes_supported: ["mcp:read"],
     token_endpoint_auth_methods_supported: [
+      "none",
       "client_secret_post",
       "client_secret_basic",
     ],
@@ -168,7 +169,13 @@ export function mountOAuthRoutes(app) {
 
       const client = await apexVerifyOAuthClient({ clientId });
       if (!client.valid) {
-        return res.status(401).send("Invalid OAuth client_id");
+        return res
+          .status(401)
+          .send(
+            "Invalid OAuth client_id — use your Google SSO Client ID (SSO_GOOGLE_CLIENT_ID) in Claude, " +
+              "or an apex_oauth_… client from APEX Admin → MCP API Keys. " +
+              "Ensure at least one active MCP key exists in APEX."
+          );
       }
 
       savePendingAuth({
@@ -294,11 +301,14 @@ export function mountOAuthRoutes(app) {
       const codeVerifier = String(req.body?.code_verifier || "").trim();
       const { clientId, clientSecret } = parseClientCredentials(req);
 
-      if (!code || !redirectUri || !codeVerifier || !clientId || !clientSecret) {
+      if (!code || !redirectUri || !codeVerifier || !clientId) {
         return res.status(400).json({ error: "invalid_request" });
       }
 
-      const client = await apexVerifyOAuthClient({ clientId, clientSecret });
+      const client = await apexVerifyOAuthClient({
+        clientId,
+        clientSecret: clientSecret || undefined,
+      });
       if (!client.valid) {
         return res.status(401).json({ error: "invalid_client" });
       }
