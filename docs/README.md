@@ -15,7 +15,7 @@ Remote MCP server for AI tools (Claude Code, Cursor, and other MCP clients) to a
 AI client (Claude Code / Cursor)
         │  Authorization: Bearer apex_mcp_…
         ▼
-mcp-server-apex (Railway)  — tools: ping, list_customers, get_merged_sources
+mcp-server-apex (Railway)  — 16+ read-only tools (customers, per-platform ads, store, GA4, SEO, merged)
         │  same Bearer token
         ▼
 apex.searchmind.tech (/api/mcp/…)

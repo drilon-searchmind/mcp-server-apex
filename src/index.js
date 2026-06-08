@@ -10,7 +10,7 @@ import {
   getApexApiUrl,
   parseBearerToken,
 } from "./apexAuth.js";
-import { registerApexTools } from "./tools.js";
+import { registerApexTools, listMcpToolNames } from "./tools.js";
 import { getPublicBaseUrl, mountOAuthRoutes } from "./oauth.js";
 
 const PORT = Number(process.env.PORT) || 3000;
@@ -25,11 +25,11 @@ function createServer(bearerToken) {
   const server = new McpServer(
     {
       name: "mcp-server-apex",
-      version: "0.3.0",
+      version: "0.5.0",
     },
     {
       instructions:
-        "Searchmind APEX MCP server (read-only). Tools: ping, list_customers, get_merged_sources. Sign in with @searchmind.dk Google account.",
+        "Searchmind APEX MCP server (read-only). Use list_customers to find customer ids, then fetch platform-specific data or get_merged_sources for combined metrics.",
     }
   );
 
@@ -225,13 +225,13 @@ app.get("/", (_req, res) => {
 
   res.json({
     name: "mcp-server-apex",
-    version: "0.3.0",
+    version: "0.5.0",
     status: "ok",
     mcpEndpoint: "/mcp",
     oauthDiscovery: "/.well-known/oauth-authorization-server",
     auth: "Google SSO OAuth or Bearer apex_mcp_… on /mcp",
     apexApiConfigured: apexConfigured,
-    tools: ["ping", "list_customers", "get_merged_sources"],
+    tools: listMcpToolNames(),
   });
 });
 
