@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
+import { isInitializeRequest } from "@modelcontextprotocol/sdk/types.js";
 import express from "express";
 
 import {
@@ -14,6 +15,9 @@ import { getPublicBaseUrl, mountOAuthRoutes } from "./oauth.js";
 
 const PORT = Number(process.env.PORT) || 3000;
 
+/** @type {Map<string, { transport: StreamableHTTPServerTransport, bearerToken: string }>} */
+const sessions = new Map();
+
 /**
  * @param {string} bearerToken
  */
@@ -25,7 +29,7 @@ function createServer(bearerToken) {
     },
     {
       instructions:
-        "Searchmind APEX MCP server (read-only). Tools: ping, list_customers, get_merged_sources. Auth: OAuth (Claude connector) or Bearer apex_mcp API key.",
+        "Searchmind APEX MCP server (read-only). Tools: ping, list_customers, get_merged_sources. Sign in with @searchmind.dk Google account.",
     }
   );
 
@@ -62,7 +66,149 @@ function authErrorResponse(res, err) {
   });
 }
 
+function jsonRpcError(res, status, message, code = -32000) {
+  return res.status(status).json({
+    jsonrpc: "2.0",
+    error: { code, message },
+    id: null,
+  });
+}
+
+/**
+ * @param {import("express").Request} req
+ * @param {import("express").Response} res
+ * @param {import("express").NextFunction} next
+ */
+async function mcpAuthMiddleware(req, res, next) {
+  try {
+    req.mcpAuth = await authenticateMcpRequest(req);
+    req.mcpBearerToken = parseBearerToken(req);
+    if (!req.mcpBearerToken) {
+      throw Object.assign(new Error("Missing Authorization Bearer token"), {
+        status: 401,
+      });
+    }
+    next();
+  } catch (err) {
+    return authErrorResponse(res, err);
+  }
+}
+
+/**
+ * @param {import("express").Request} req
+ * @param {import("express").Response} res
+ */
+async function handleMcpPost(req, res) {
+  const sessionId = String(req.headers["mcp-session-id"] || "").trim();
+  const bearerToken = req.mcpBearerToken;
+
+  try {
+    if (sessionId && sessions.has(sessionId)) {
+      const session = sessions.get(sessionId);
+      await session.transport.handleRequest(req, res, req.body);
+      return;
+    }
+
+    if (!sessionId && isInitializeRequest(req.body)) {
+      const transport = new StreamableHTTPServerTransport({
+        sessionIdGenerator: () => randomUUID(),
+        onsessioninitialized: (id) => {
+          sessions.set(id, { transport, bearerToken });
+          console.error(`[mcp] session initialized: ${id}`);
+        },
+      });
+
+      transport.onclose = () => {
+        const id = transport.sessionId;
+        if (id && sessions.has(id)) {
+          sessions.delete(id);
+          console.error(`[mcp] session closed: ${id}`);
+        }
+      };
+
+      const server = createServer(bearerToken);
+      await server.connect(transport);
+      await transport.handleRequest(req, res, req.body);
+      return;
+    }
+
+    return jsonRpcError(
+      res,
+      400,
+      "Bad Request: No valid session ID provided"
+    );
+  } catch (error) {
+    console.error("[mcp] POST failed:", error);
+    if (!res.headersSent) {
+      jsonRpcError(res, 500, "Internal server error", -32603);
+    }
+  }
+}
+
+/**
+ * @param {import("express").Request} req
+ * @param {import("express").Response} res
+ */
+async function handleMcpGet(req, res) {
+  const sessionId = String(req.headers["mcp-session-id"] || "").trim();
+  const session = sessionId ? sessions.get(sessionId) : null;
+
+  if (!session) {
+    return res.status(400).send("Invalid or missing session ID");
+  }
+
+  try {
+    await session.transport.handleRequest(req, res);
+  } catch (error) {
+    console.error("[mcp] GET failed:", error);
+    if (!res.headersSent) {
+      res.status(500).send("Internal server error");
+    }
+  }
+}
+
+/**
+ * @param {import("express").Request} req
+ * @param {import("express").Response} res
+ */
+async function handleMcpDelete(req, res) {
+  const sessionId = String(req.headers["mcp-session-id"] || "").trim();
+  const session = sessionId ? sessions.get(sessionId) : null;
+
+  if (!session) {
+    return res.status(400).send("Invalid or missing session ID");
+  }
+
+  try {
+    await session.transport.handleRequest(req, res);
+    sessions.delete(sessionId);
+  } catch (error) {
+    console.error("[mcp] DELETE failed:", error);
+    if (!res.headersSent) {
+      res.status(500).send("Internal server error");
+    }
+  }
+}
+
 const app = express();
+
+app.use((req, res, next) => {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader(
+    "Access-Control-Expose-Headers",
+    "Mcp-Session-Id, WWW-Authenticate, Last-Event-Id, Mcp-Protocol-Version"
+  );
+  res.setHeader(
+    "Access-Control-Allow-Headers",
+    "Authorization, Content-Type, Accept, Mcp-Session-Id, Last-Event-Id, Mcp-Protocol-Version"
+  );
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS");
+  if (req.method === "OPTIONS") {
+    return res.sendStatus(204);
+  }
+  next();
+});
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -83,7 +229,7 @@ app.get("/", (_req, res) => {
     status: "ok",
     mcpEndpoint: "/mcp",
     oauthDiscovery: "/.well-known/oauth-authorization-server",
-    auth: "OAuth (Claude connector) or Bearer apex_mcp_… on POST /mcp",
+    auth: "Google SSO OAuth or Bearer apex_mcp_… on /mcp",
     apexApiConfigured: apexConfigured,
     tools: ["ping", "list_customers", "get_merged_sources"],
   });
@@ -93,49 +239,10 @@ app.get("/health", (_req, res) => {
   res.status(200).send("ok");
 });
 
-app.post("/mcp", async (req, res) => {
-  let bearerToken;
-  try {
-    req.mcpAuth = await authenticateMcpRequest(req);
-    bearerToken = parseBearerToken(req);
-    if (!bearerToken) {
-      throw Object.assign(new Error("Missing Authorization Bearer token"), {
-        status: 401,
-      });
-    }
-  } catch (err) {
-    return authErrorResponse(res, err);
-  }
-
-  const server = createServer(bearerToken);
-
-  try {
-    const transport = new StreamableHTTPServerTransport({
-      sessionIdGenerator: () => randomUUID(),
-    });
-
-    await server.connect(transport);
-    await transport.handleRequest(req, res, req.body);
-
-    res.on("close", () => {
-      transport.close();
-      server.close();
-    });
-  } catch (error) {
-    console.error("MCP request failed:", error);
-
-    if (!res.headersSent) {
-      res.status(500).json({
-        jsonrpc: "2.0",
-        error: {
-          code: -32603,
-          message: "Internal server error",
-        },
-        id: null,
-      });
-    }
-  }
-});
+app.options("/mcp", (_req, res) => res.sendStatus(204));
+app.post("/mcp", mcpAuthMiddleware, handleMcpPost);
+app.get("/mcp", mcpAuthMiddleware, handleMcpGet);
+app.delete("/mcp", mcpAuthMiddleware, handleMcpDelete);
 
 app.listen(PORT, () => {
   console.error(`mcp-server-apex listening on port ${PORT}`);

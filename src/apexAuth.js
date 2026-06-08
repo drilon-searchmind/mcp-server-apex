@@ -73,16 +73,12 @@ async function verifyOAuthJwtToken(token) {
     return { valid: false, error: "Invalid OAuth access token" };
   }
 
-  const apex = await verifyKeyWithApex(token);
-  if (!apex.valid) {
-    return apex;
-  }
-
   return {
     valid: true,
     readOnly: true,
     scope: "all",
     keyId: payload.keyId,
+    email: payload.email || null,
     authMethod: "oauth",
   };
 }
