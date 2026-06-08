@@ -1,12 +1,86 @@
 import { z } from "zod";
 
 import { apexGet, jsonToolResult } from "./apexClient.js";
+import {
+    MCP_EXTENDED_CUSTOMER_RESOURCE_TOOLS,
+    MCP_EXTENDED_DATA_TOOLS,
+    MCP_EXTENDED_GLOBAL_RESOURCE_TOOLS,
+} from "./toolCatalog.js";
 
 const dateRangeSchema = {
     customerId: z.string().describe("APEX customer MongoDB id"),
     startDate: z.string().describe("Start date YYYY-MM-DD (inclusive)"),
     endDate: z.string().describe("End date YYYY-MM-DD (inclusive, max 366 day range)"),
 };
+
+/**
+ * @param {{ needsDateRange?: boolean, extraParams?: string[], includeCustomerId?: boolean }} tool
+ */
+function buildCustomerResourceSchema(tool) {
+    /** @type {Record<string, z.ZodTypeAny>} */
+    const shape = {
+        customerId: z.string().describe("APEX customer MongoDB id"),
+    };
+    if (tool.needsDateRange) {
+        shape.startDate = z.string().describe("Start date YYYY-MM-DD");
+        shape.endDate = z.string().describe("End date YYYY-MM-DD");
+    }
+    for (const param of tool.extraParams || []) {
+        shape[param] = z.string().optional().describe(`Query param: ${param}`);
+    }
+    return z.object(shape);
+}
+
+/**
+ * @param {{ needsDateRange?: boolean, extraParams?: string[] }} tool
+ */
+function buildGlobalResourceSchema(tool) {
+    /** @type {Record<string, z.ZodTypeAny>} */
+    const shape = {};
+    if (tool.needsDateRange) {
+        shape.startDate = z.string().describe("Start date YYYY-MM-DD");
+        shape.endDate = z.string().describe("End date YYYY-MM-DD");
+    }
+    for (const param of tool.extraParams || []) {
+        if (param === "startDate" || param === "endDate") continue;
+        shape[param] =
+            param === "channel"
+                ? z.string().describe("Channel: facebook or google-ads")
+                : z.string().optional().describe(`Query param: ${param}`);
+    }
+    return z.object(shape);
+}
+
+/**
+ * @param {{ needsDateRange?: boolean, extraParams?: string[] }} tool
+ */
+function buildDataSourceSchema(tool) {
+    /** @type {Record<string, z.ZodTypeAny>} */
+    const shape = {
+        customerId: z.string().describe("APEX customer MongoDB id"),
+    };
+    if (tool.needsDateRange !== false) {
+        shape.startDate = z.string().describe("Start date YYYY-MM-DD");
+        shape.endDate = z.string().describe("End date YYYY-MM-DD");
+    }
+    for (const param of tool.extraParams || []) {
+        shape[param] = z.string().optional().describe(`Query param: ${param}`);
+    }
+    return z.object(shape);
+}
+
+/**
+ * @param {Record<string, unknown>} args
+ */
+function argsToQuery(args) {
+    /** @type {Record<string, string | undefined>} */
+    const query = {};
+    for (const [key, value] of Object.entries(args || {})) {
+        if (value == null || value === "") continue;
+        query[key] = String(value);
+    }
+    return query;
+}
 
 /** @type {Array<{ name: string, title: string, description: string, path: string, params?: Record<string, z.ZodTypeAny> }>} */
 export const MCP_DATA_TOOLS = [
@@ -320,27 +394,18 @@ export function registerApexTools(server, bearerToken) {
         );
     }
 
-    for (const tool of MCP_CUSTOMER_RESOURCE_TOOLS) {
-        const inputSchema = tool.needsDateRange
-            ? z.object(dateRangeSchema)
-            : z.object({
-                  customerId: z.string().describe("APEX customer MongoDB id"),
-              });
-
+    for (const tool of [...MCP_CUSTOMER_RESOURCE_TOOLS, ...MCP_EXTENDED_CUSTOMER_RESOURCE_TOOLS]) {
         server.registerTool(
             tool.name,
             {
                 title: tool.title,
                 description: tool.description,
-                inputSchema,
+                inputSchema: buildCustomerResourceSchema(tool),
             },
             async (args) => {
                 try {
                     const path = `/api/mcp/customers/${encodeURIComponent(args.customerId)}/resources/${tool.resource}`;
-                    const query = tool.needsDateRange
-                        ? { startDate: args.startDate, endDate: args.endDate }
-                        : {};
-                    const data = await apexGet(bearerToken, path, query);
+                    const data = await apexGet(bearerToken, path, argsToQuery(args));
                     return jsonToolResult(data);
                 } catch (e) {
                     return {
@@ -354,19 +419,48 @@ export function registerApexTools(server, bearerToken) {
         );
     }
 
-    for (const tool of MCP_GLOBAL_RESOURCE_TOOLS) {
+    for (const tool of [...MCP_GLOBAL_RESOURCE_TOOLS, ...MCP_EXTENDED_GLOBAL_RESOURCE_TOOLS]) {
         server.registerTool(
             tool.name,
             {
                 title: tool.title,
                 description: tool.description,
-                inputSchema: z.object({}),
+                inputSchema: buildGlobalResourceSchema(tool),
             },
-            async () => {
+            async (args) => {
                 try {
                     const data = await apexGet(
                         bearerToken,
-                        `/api/mcp/global/${tool.resource}`
+                        `/api/mcp/global/${tool.resource}`,
+                        argsToQuery(args)
+                    );
+                    return jsonToolResult(data);
+                } catch (e) {
+                    return {
+                        content: [
+                            { type: "text", text: `${tool.name} failed: ${e.message}` },
+                        ],
+                        isError: true,
+                    };
+                }
+            }
+        );
+    }
+
+    for (const tool of MCP_EXTENDED_DATA_TOOLS) {
+        server.registerTool(
+            tool.name,
+            {
+                title: tool.title,
+                description: tool.description,
+                inputSchema: buildDataSourceSchema(tool),
+            },
+            async (args) => {
+                try {
+                    const data = await apexGet(
+                        bearerToken,
+                        `/api/mcp/data/${tool.resource}`,
+                        argsToQuery(args)
                     );
                     return jsonToolResult(data);
                 } catch (e) {
@@ -391,7 +485,10 @@ export function listMcpToolNames() {
         "list_data_sources",
         "get_merged_sources",
         ...MCP_DATA_TOOLS.map((t) => t.name),
+        ...MCP_EXTENDED_DATA_TOOLS.map((t) => t.name),
         ...MCP_CUSTOMER_RESOURCE_TOOLS.map((t) => t.name),
+        ...MCP_EXTENDED_CUSTOMER_RESOURCE_TOOLS.map((t) => t.name),
         ...MCP_GLOBAL_RESOURCE_TOOLS.map((t) => t.name),
+        ...MCP_EXTENDED_GLOBAL_RESOURCE_TOOLS.map((t) => t.name),
     ];
 }
