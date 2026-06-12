@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { apexGet, apexPost, jsonToolResult } from "./apexClient.js";
+import { apexGet, apexPost, apexToolErrorResult, jsonToolResult } from "./apexClient.js";
 import {
     MCP_EXTENDED_CUSTOMER_RESOURCE_TOOLS,
     MCP_EXTENDED_DATA_TOOLS,
@@ -262,10 +262,7 @@ export function registerApexTools(server, bearerToken) {
                 });
                 return jsonToolResult(data);
             } catch (e) {
-                return {
-                    content: [{ type: "text", text: `list_customers failed: ${e.message}` }],
-                    isError: true,
-                };
+                return apexToolErrorResult("list_customers", e);
             }
         }
     );
@@ -283,12 +280,7 @@ export function registerApexTools(server, bearerToken) {
                 const data = await apexGet(bearerToken, "/api/mcp/resources");
                 return jsonToolResult(data);
             } catch (e) {
-                return {
-                    content: [
-                        { type: "text", text: `list_mcp_resources failed: ${e.message}` },
-                    ],
-                    isError: true,
-                };
+                return apexToolErrorResult("list_mcp_resources", e);
             }
         }
     );
@@ -311,10 +303,7 @@ export function registerApexTools(server, bearerToken) {
                 );
                 return jsonToolResult(data);
             } catch (e) {
-                return {
-                    content: [{ type: "text", text: `get_customer failed: ${e.message}` }],
-                    isError: true,
-                };
+                return apexToolErrorResult("get_customer", e);
             }
         }
     );
@@ -332,10 +321,7 @@ export function registerApexTools(server, bearerToken) {
                 const data = await apexGet(bearerToken, "/api/mcp/data");
                 return jsonToolResult(data);
             } catch (e) {
-                return {
-                    content: [{ type: "text", text: `list_data_sources failed: ${e.message}` }],
-                    isError: true,
-                };
+                return apexToolErrorResult("list_data_sources", e);
             }
         }
     );
@@ -357,12 +343,7 @@ export function registerApexTools(server, bearerToken) {
                 });
                 return jsonToolResult(data);
             } catch (e) {
-                return {
-                    content: [
-                        { type: "text", text: `get_merged_sources failed: ${e.message}` },
-                    ],
-                    isError: true,
-                };
+                return apexToolErrorResult("get_merged_sources", e);
             }
         }
     );
@@ -384,12 +365,7 @@ export function registerApexTools(server, bearerToken) {
                     });
                     return jsonToolResult(data);
                 } catch (e) {
-                    return {
-                        content: [
-                            { type: "text", text: `${tool.name} failed: ${e.message}` },
-                        ],
-                        isError: true,
-                    };
+                    return apexToolErrorResult(tool.name, e);
                 }
             }
         );
@@ -409,12 +385,7 @@ export function registerApexTools(server, bearerToken) {
                     const data = await apexGet(bearerToken, path, argsToQuery(args));
                     return jsonToolResult(data);
                 } catch (e) {
-                    return {
-                        content: [
-                            { type: "text", text: `${tool.name} failed: ${e.message}` },
-                        ],
-                        isError: true,
-                    };
+                    return apexToolErrorResult(tool.name, e);
                 }
             }
         );
@@ -437,12 +408,7 @@ export function registerApexTools(server, bearerToken) {
                     );
                     return jsonToolResult(data);
                 } catch (e) {
-                    return {
-                        content: [
-                            { type: "text", text: `${tool.name} failed: ${e.message}` },
-                        ],
-                        isError: true,
-                    };
+                    return apexToolErrorResult(tool.name, e);
                 }
             }
         );
@@ -465,12 +431,7 @@ export function registerApexTools(server, bearerToken) {
                     );
                     return jsonToolResult(data);
                 } catch (e) {
-                    return {
-                        content: [
-                            { type: "text", text: `${tool.name} failed: ${e.message}` },
-                        ],
-                        isError: true,
-                    };
+                    return apexToolErrorResult(tool.name, e);
                 }
             }
         );
@@ -489,10 +450,7 @@ export function registerApexTools(server, bearerToken) {
                 const data = await apexGet(bearerToken, "/api/mcp/proxy/routes");
                 return jsonToolResult(data);
             } catch (e) {
-                return {
-                    content: [{ type: "text", text: `list_proxy_routes failed: ${e.message}` }],
-                    isError: true,
-                };
+                return apexToolErrorResult("list_proxy_routes", e);
             }
         }
     );
@@ -525,10 +483,7 @@ export function registerApexTools(server, bearerToken) {
                 });
                 return jsonToolResult(data);
             } catch (e) {
-                return {
-                    content: [{ type: "text", text: `call_apex_api failed: ${e.message}` }],
-                    isError: true,
-                };
+                return apexToolErrorResult("call_apex_api", e);
             }
         }
     );
@@ -557,12 +512,7 @@ export function registerApexTools(server, bearerToken) {
                 });
                 return jsonToolResult(data);
             } catch (e) {
-                return {
-                    content: [
-                        { type: "text", text: `shopify_graphql_read failed: ${e.message}` },
-                    ],
-                    isError: true,
-                };
+                return apexToolErrorResult("shopify_graphql_read", e);
             }
         }
     );
@@ -586,12 +536,7 @@ export function registerApexTools(server, bearerToken) {
                 });
                 return jsonToolResult(data);
             } catch (e) {
-                return {
-                    content: [
-                        { type: "text", text: `google_ads_gaql_read failed: ${e.message}` },
-                    ],
-                    isError: true,
-                };
+                return apexToolErrorResult("google_ads_gaql_read", e);
             }
         }
     );
@@ -620,10 +565,7 @@ export function registerApexTools(server, bearerToken) {
                 });
                 return jsonToolResult(data);
             } catch (e) {
-                return {
-                    content: [{ type: "text", text: `meta_ads_read failed: ${e.message}` }],
-                    isError: true,
-                };
+                return apexToolErrorResult("meta_ads_read", e);
             }
         }
     );

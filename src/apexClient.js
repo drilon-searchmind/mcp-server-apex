@@ -122,3 +122,42 @@ export function jsonToolResult(data) {
     ],
   };
 }
+
+/**
+ * Return MCP tool error content with full APEX JSON body when available.
+ * @param {string} toolName
+ * @param {unknown} error
+ */
+export function apexToolErrorResult(toolName, error) {
+  const err = /** @type {{ message?: string, status?: number, data?: Record<string, unknown> }} */ (
+    error
+  );
+  const message = err?.message || String(error);
+  const data = err?.data;
+
+  if (data && typeof data === "object" && !Array.isArray(data)) {
+    return {
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify(
+            {
+              tool: toolName,
+              ok: false,
+              status: err?.status ?? null,
+              ...data,
+            },
+            null,
+            2
+          ),
+        },
+      ],
+      isError: true,
+    };
+  }
+
+  return {
+    content: [{ type: "text", text: `${toolName} failed: ${message}` }],
+    isError: true,
+  };
+}
