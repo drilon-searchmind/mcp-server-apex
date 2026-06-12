@@ -49,6 +49,44 @@ export async function apexGet(bearerToken, path, query = {}) {
 }
 
 /**
+ * @param {string} bearerToken
+ * @param {string} path
+ * @param {Record<string, unknown>} body
+ */
+export async function apexPost(bearerToken, path, body = {}) {
+  const base = getApexApiUrl();
+  const url = new URL(path.startsWith("/") ? path : `/${path}`, base);
+
+  const res = await fetch(url.toString(), {
+    method: "POST",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${bearerToken}`,
+    },
+    body: JSON.stringify(body),
+    cache: "no-store",
+  });
+
+  const text = await res.text();
+  let data;
+  try {
+    data = text ? JSON.parse(text) : {};
+  } catch {
+    data = { error: text?.slice(0, 500) || "Invalid JSON from APEX" };
+  }
+
+  if (!res.ok) {
+    const err = new Error(data.error || data.message || `APEX ${res.status}`);
+    err.status = res.status;
+    err.data = data;
+    throw err;
+  }
+
+  return data;
+}
+
+/**
  * @param {{ clientId: string, clientSecret?: string }} body
  */
 export async function apexVerifyOAuthClient(body) {

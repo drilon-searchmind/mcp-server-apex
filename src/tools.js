@@ -1,10 +1,11 @@
 import { z } from "zod";
 
-import { apexGet, jsonToolResult } from "./apexClient.js";
+import { apexGet, apexPost, jsonToolResult } from "./apexClient.js";
 import {
     MCP_EXTENDED_CUSTOMER_RESOURCE_TOOLS,
     MCP_EXTENDED_DATA_TOOLS,
     MCP_EXTENDED_GLOBAL_RESOURCE_TOOLS,
+    MCP_PROXY_TOOLS,
 } from "./toolCatalog.js";
 
 const dateRangeSchema = {
@@ -474,6 +475,158 @@ export function registerApexTools(server, bearerToken) {
             }
         );
     }
+
+    server.registerTool(
+        "list_proxy_routes",
+        {
+            title: "List proxy routes",
+            description:
+                "Allowlisted APEX proxy routes, Shopify query types, Google GAQL resources, Meta endpoints, and guardrails.",
+            inputSchema: z.object({}),
+        },
+        async () => {
+            try {
+                const data = await apexGet(bearerToken, "/api/mcp/proxy/routes");
+                return jsonToolResult(data);
+            } catch (e) {
+                return {
+                    content: [{ type: "text", text: `list_proxy_routes failed: ${e.message}` }],
+                    isError: true,
+                };
+            }
+        }
+    );
+
+    server.registerTool(
+        "call_apex_api",
+        {
+            title: "Call APEX API (allowlisted)",
+            description:
+                "Read-only proxy to allowlisted APEX routes like /api/merged-sources. Server injects credentials and sanitizes responses.",
+            inputSchema: z.object({
+                route: z
+                    .string()
+                    .describe(
+                        "Allowlisted route e.g. /api/merged-sources — use list_proxy_routes for full list"
+                    ),
+                customerId: z.string().describe("APEX customer MongoDB id"),
+                params: z
+                    .record(z.string())
+                    .optional()
+                    .describe("Query params e.g. startDate, endDate, period, channel"),
+            }),
+        },
+        async ({ route, customerId, params }) => {
+            try {
+                const data = await apexPost(bearerToken, "/api/mcp/proxy/apex", {
+                    route,
+                    customerId,
+                    params: params || {},
+                });
+                return jsonToolResult(data);
+            } catch (e) {
+                return {
+                    content: [{ type: "text", text: `call_apex_api failed: ${e.message}` }],
+                    isError: true,
+                };
+            }
+        }
+    );
+
+    server.registerTool(
+        "shopify_graphql_read",
+        {
+            title: "Shopify GraphQL / ShopifyQL read",
+            description:
+                "Read-only Shopify via allowlisted queryType: SalesReport, OrdersReport, orders, products, shop, etc.",
+            inputSchema: z.object({
+                queryType: z.string().describe("Allowlisted query type — see list_proxy_routes"),
+                customerId: z.string().describe("APEX customer MongoDB id"),
+                params: z
+                    .record(z.string())
+                    .optional()
+                    .describe("e.g. startDate, endDate, first, after"),
+            }),
+        },
+        async ({ queryType, customerId, params }) => {
+            try {
+                const data = await apexPost(bearerToken, "/api/mcp/proxy/shopify", {
+                    queryType,
+                    customerId,
+                    params: params || {},
+                });
+                return jsonToolResult(data);
+            } catch (e) {
+                return {
+                    content: [
+                        { type: "text", text: `shopify_graphql_read failed: ${e.message}` },
+                    ],
+                    isError: true,
+                };
+            }
+        }
+    );
+
+    server.registerTool(
+        "google_ads_gaql_read",
+        {
+            title: "Google Ads GAQL read",
+            description:
+                "Read-only GAQL SELECT query against allowlisted resources (campaign, ad_group, keywords_view, etc.).",
+            inputSchema: z.object({
+                customerId: z.string().describe("APEX customer MongoDB id"),
+                query: z.string().describe("GAQL SELECT query (read-only)"),
+            }),
+        },
+        async ({ customerId, query }) => {
+            try {
+                const data = await apexPost(bearerToken, "/api/mcp/proxy/google-ads", {
+                    customerId,
+                    query,
+                });
+                return jsonToolResult(data);
+            } catch (e) {
+                return {
+                    content: [
+                        { type: "text", text: `google_ads_gaql_read failed: ${e.message}` },
+                    ],
+                    isError: true,
+                };
+            }
+        }
+    );
+
+    server.registerTool(
+        "meta_ads_read",
+        {
+            title: "Meta ads read",
+            description:
+                "Read-only Meta Graph API: endpoint = insights | campaigns | adsets | ads | accounts.",
+            inputSchema: z.object({
+                endpoint: z.string().describe("insights, campaigns, adsets, ads, or accounts"),
+                customerId: z.string().describe("APEX customer MongoDB id"),
+                params: z
+                    .record(z.string())
+                    .optional()
+                    .describe("e.g. startDate, endDate, level, limit"),
+            }),
+        },
+        async ({ endpoint, customerId, params }) => {
+            try {
+                const data = await apexPost(bearerToken, "/api/mcp/proxy/meta", {
+                    endpoint,
+                    customerId,
+                    params: params || {},
+                });
+                return jsonToolResult(data);
+            } catch (e) {
+                return {
+                    content: [{ type: "text", text: `meta_ads_read failed: ${e.message}` }],
+                    isError: true,
+                };
+            }
+        }
+    );
 }
 
 export function listMcpToolNames() {
@@ -490,5 +643,6 @@ export function listMcpToolNames() {
         ...MCP_EXTENDED_CUSTOMER_RESOURCE_TOOLS.map((t) => t.name),
         ...MCP_GLOBAL_RESOURCE_TOOLS.map((t) => t.name),
         ...MCP_EXTENDED_GLOBAL_RESOURCE_TOOLS.map((t) => t.name),
+        ...MCP_PROXY_TOOLS.map((t) => t.name),
     ];
 }

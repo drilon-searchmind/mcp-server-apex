@@ -228,6 +228,22 @@ Calls `GET /api/mcp/merged-sources` on APEX.
 
 ---
 
+## Proxy tools (v0.7.0)
+
+Read-only allowlisted proxies. Credentials stay on APEX; responses are sanitized.
+
+| MCP tool | APEX endpoint | Body |
+|----------|---------------|------|
+| `list_proxy_routes` | `GET /api/mcp/proxy/routes` | — |
+| `call_apex_api` | `POST /api/mcp/proxy/apex` | `{ route, customerId, params? }` |
+| `shopify_graphql_read` | `POST /api/mcp/proxy/shopify` | `{ queryType, customerId, params? }` |
+| `google_ads_gaql_read` | `POST /api/mcp/proxy/google-ads` | `{ customerId, query }` |
+| `meta_ads_read` | `POST /api/mcp/proxy/meta` | `{ endpoint, customerId, params? }` |
+
+Guardrails: `customerId` required, no writes, rate limit 60/min/customer, audit log.
+
+---
+
 ## Admin (APEX UI only)
 
 | Location | Purpose |

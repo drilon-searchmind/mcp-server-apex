@@ -47,3 +47,51 @@ export const MCP_EXTENDED_GLOBAL_RESOURCE_TOOLS = [
     { name: "get_bing_webmaster_status", resource: "bing-webmaster-status", title: "Get Bing Webmaster status", description: "Bing Webmaster integration configuration status.", needsDateRange: false },
     { name: "list_seo_properties", resource: "seo-list-properties", title: "List SEO properties", description: "Google Search Console properties accessible to APEX.", needsDateRange: false },
 ];
+
+/** Read-only proxy tools (allowlisted routes / platform queries). v0.7.0 */
+export const MCP_PROXY_TOOLS = [
+    {
+        name: "list_proxy_routes",
+        title: "List proxy routes",
+        description:
+            "Catalog of allowlisted APEX proxy routes, Shopify query types, Google GAQL resources, and Meta endpoints.",
+        path: "/api/mcp/proxy/routes",
+        method: "GET",
+    },
+    {
+        name: "call_apex_api",
+        title: "Call APEX API (allowlisted)",
+        description:
+            "Read-only proxy to allowlisted APEX dashboard routes. Credentials injected server-side; responses sanitized. Prefer curated tools when available.",
+        path: "/api/mcp/proxy/apex",
+        method: "POST",
+        bodyKeys: ["route", "customerId", "params"],
+    },
+    {
+        name: "shopify_graphql_read",
+        title: "Shopify GraphQL / ShopifyQL read",
+        description:
+            "Read-only Shopify Admin GraphQL or ShopifyQL via allowlisted query types (SalesReport, orders, products, etc.).",
+        path: "/api/mcp/proxy/shopify",
+        method: "POST",
+        bodyKeys: ["queryType", "customerId", "params"],
+    },
+    {
+        name: "google_ads_gaql_read",
+        title: "Google Ads GAQL read",
+        description:
+            "Read-only Google Ads GAQL SELECT query. Resources allowlisted (campaign, ad_group, keywords_view, etc.).",
+        path: "/api/mcp/proxy/google-ads",
+        method: "POST",
+        bodyKeys: ["customerId", "query"],
+    },
+    {
+        name: "meta_ads_read",
+        title: "Meta ads read",
+        description:
+            "Read-only Meta Graph API proxy: insights, campaigns, adsets, ads, accounts.",
+        path: "/api/mcp/proxy/meta",
+        method: "POST",
+        bodyKeys: ["endpoint", "customerId", "params"],
+    },
+];
