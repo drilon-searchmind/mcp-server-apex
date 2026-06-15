@@ -8,6 +8,7 @@ Remote MCP server for AI tools (Claude Code, Cursor, and other MCP clients) to a
 | [Authentication](./authentication.md) | API keys + OAuth verification flow |
 | [Claude connector OAuth](./claude-connector-oauth.md) | Claude MCP connector setup |
 | [Endpoints](./endpoints.md) | **Full API reference** — Railway + APEX + MCP tools |
+| [LLM tools](./llm-tools.md) | OpenAI + Gemini inside Claude (split-testing) |
 
 ## Architecture
 

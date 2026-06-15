@@ -11,6 +11,8 @@ import {
   parseBearerToken,
 } from "./apexAuth.js";
 import { registerApexTools, listMcpToolNames } from "./tools.js";
+import { getLlmProviderStatus } from "./llmClient.js";
+import { MCP_LLM_TOOL_NAMES, registerLlmTools } from "./llmTools.js";
 import { getPublicBaseUrl, mountOAuthRoutes } from "./oauth.js";
 
 const PORT = Number(process.env.PORT) || 3000;
@@ -25,15 +27,16 @@ function createServer(bearerToken) {
   const server = new McpServer(
     {
       name: "mcp-server-apex",
-      version: "0.6.0",
+      version: "0.7.0",
     },
     {
       instructions:
-        "Searchmind APEX MCP server (read-only). Use list_customers to find customer ids, then fetch platform-specific data or get_merged_sources for combined metrics.",
+        "Searchmind APEX MCP server (read-only analytics + optional LLM tools). Use list_customers to find customer ids, then fetch platform-specific data or get_merged_sources for combined metrics. For OpenAI/Gemini inside Claude, use openai_chat, gemini_chat, or llm_splittest (API keys are server-side).",
     }
   );
 
   registerApexTools(server, bearerToken);
+  registerLlmTools(server);
   return server;
 }
 
@@ -225,13 +228,14 @@ app.get("/", (_req, res) => {
 
   res.json({
     name: "mcp-server-apex",
-    version: "0.6.0",
+    version: "0.7.0",
     status: "ok",
     mcpEndpoint: "/mcp",
     oauthDiscovery: "/.well-known/oauth-authorization-server",
     auth: "Google SSO OAuth or Bearer apex_mcp_… on /mcp",
     apexApiConfigured: apexConfigured,
-    tools: listMcpToolNames(),
+    llmProviders: getLlmProviderStatus(),
+    tools: [...listMcpToolNames(), ...MCP_LLM_TOOL_NAMES],
   });
 });
 
