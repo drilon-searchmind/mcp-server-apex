@@ -150,7 +150,7 @@ export function registerLlmTools(server) {
             )
             .optional()
             .describe(
-              "Models to compare. Default: openai/gpt-4o-mini and gemini/gemini-2.0-flash"
+              "Models to compare. Default: openai/gpt-4o-mini and gemini/gemini-2.5-flash"
             ),
         })
         .refine(

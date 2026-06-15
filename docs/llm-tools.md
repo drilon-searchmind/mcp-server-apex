@@ -34,7 +34,7 @@ Returns configured providers, default models, and the curated model list.
 
 ### `gemini_chat`
 
-Same shape as `openai_chat`. Default model: `gemini-2.0-flash`.
+Same shape as `openai_chat`. Default model: `gemini-2.5-flash`.
 
 ### `llm_splittest`
 
@@ -43,7 +43,7 @@ Runs the **same prompt** against multiple models **in parallel** and returns sid
 Default variants if `variants` is omitted:
 
 - OpenAI `gpt-4o-mini`
-- Gemini `gemini-2.0-flash`
+- Gemini `gemini-2.5-flash`
 
 Custom example:
 
@@ -54,7 +54,7 @@ Custom example:
   "variants": [
     { "provider": "openai", "model": "gpt-4o", "label": "GPT-4o" },
     { "provider": "openai", "model": "gpt-4o-mini", "label": "GPT-4o mini" },
-    { "provider": "gemini", "model": "gemini-2.0-flash", "label": "Gemini Flash" }
+    { "provider": "gemini", "model": "gemini-2.5-flash", "label": "Gemini Flash" }
   ]
 }
 ```

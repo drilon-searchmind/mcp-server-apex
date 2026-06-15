@@ -13,10 +13,32 @@ export const OPENAI_MODELS = [
 ];
 
 export const GEMINI_MODELS = [
-  { id: "gemini-2.0-flash", label: "Gemini 2.0 Flash (default)" },
-  { id: "gemini-2.5-flash-preview-05-20", label: "Gemini 2.5 Flash preview" },
-  { id: "gemini-1.5-pro", label: "Gemini 1.5 Pro" },
+  { id: "gemini-2.5-flash", label: "Gemini 2.5 Flash (default, fast)" },
+  { id: "gemini-2.5-pro", label: "Gemini 2.5 Pro" },
+  { id: "gemini-2.5-flash-lite", label: "Gemini 2.5 Flash Lite (cheapest)" },
+  { id: "gemini-flash-latest", label: "Gemini Flash (always latest)" },
+  { id: "gemini-pro-latest", label: "Gemini Pro (always latest)" },
+  { id: "gemini-3-flash-preview", label: "Gemini 3 Flash preview" },
 ];
+
+/** Retired ids → current equivalents (Google removed 2.0/1.5 from the API). */
+const GEMINI_MODEL_ALIASES = {
+  "gemini-2.0-flash": "gemini-2.5-flash",
+  "gemini-2.0-flash-001": "gemini-2.5-flash",
+  "gemini-2.0-flash-lite": "gemini-2.5-flash-lite",
+  "gemini-2.0-flash-lite-001": "gemini-2.5-flash-lite",
+  "gemini-1.5-pro": "gemini-2.5-pro",
+  "gemini-1.5-flash": "gemini-2.5-flash",
+  "gemini-2.5-flash-preview-05-20": "gemini-2.5-flash",
+};
+
+/**
+ * @param {string | undefined} model
+ */
+export function resolveGeminiModel(model) {
+  const id = String(model || "gemini-2.5-flash").trim();
+  return GEMINI_MODEL_ALIASES[id] || id;
+}
 
 export function getOpenAiApiKey() {
   return String(process.env.OPENAI_API_KEY || "").trim();
@@ -43,7 +65,7 @@ export function getLlmProviderStatus() {
     },
     gemini: {
       configured: isGeminiConfigured(),
-      defaultModel: "gemini-2.0-flash",
+      defaultModel: "gemini-2.5-flash",
       models: GEMINI_MODELS,
     },
   };
@@ -171,7 +193,8 @@ export async function geminiChat(opts) {
     });
   }
 
-  const model = opts.model || "gemini-2.0-flash";
+  const requestedModel = opts.model || "gemini-2.5-flash";
+  const model = resolveGeminiModel(requestedModel);
   const started = Date.now();
   const { system, conversation } = splitSystemMessages(opts.messages);
 
@@ -236,6 +259,7 @@ export async function geminiChat(opts) {
   return {
     provider: "gemini",
     model,
+    requestedModel: requestedModel !== model ? requestedModel : undefined,
     text,
     usage,
     latencyMs: Date.now() - started,
@@ -268,7 +292,7 @@ export async function runSplittest(opts) {
     ? opts.variants
     : [
         { provider: "openai", model: "gpt-4o-mini", label: "OpenAI GPT-4o mini" },
-        { provider: "gemini", model: "gemini-2.0-flash", label: "Gemini 2.0 Flash" },
+        { provider: "gemini", model: "gemini-2.5-flash", label: "Gemini 2.5 Flash" },
       ];
 
   const results = await Promise.all(
@@ -276,7 +300,7 @@ export async function runSplittest(opts) {
       const provider = variant.provider;
       const model =
         variant.model ||
-        (provider === "openai" ? "gpt-4o-mini" : "gemini-2.0-flash");
+        (provider === "openai" ? "gpt-4o-mini" : "gemini-2.5-flash");
       const label = variant.label || `${provider}/${model}`;
       const started = Date.now();
 
