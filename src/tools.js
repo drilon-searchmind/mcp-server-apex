@@ -6,6 +6,7 @@ import {
     MCP_EXTENDED_DATA_TOOLS,
     MCP_EXTENDED_GLOBAL_RESOURCE_TOOLS,
     MCP_PROXY_TOOLS,
+    MCP_STANDALONE_ENDPOINT_TOOLS,
 } from "./toolCatalog.js";
 
 const dateRangeSchema = {
@@ -71,6 +72,25 @@ function buildDataSourceSchema(tool) {
 }
 
 /**
+ * @param {{ needsDateRange?: boolean, extraParams?: string[] }} tool
+ */
+function buildStandaloneEndpointSchema(tool) {
+    /** @type {Record<string, z.ZodTypeAny>} */
+    const shape = {
+        customerId: z.string().describe("APEX customer MongoDB id"),
+    };
+    if (tool.needsDateRange) {
+        shape.startDate = z.string().describe("Start date YYYY-MM-DD");
+        shape.endDate = z.string().describe("End date YYYY-MM-DD");
+    }
+    for (const param of tool.extraParams || []) {
+        if (param === "startDate" || param === "endDate") continue;
+        shape[param] = z.string().optional().describe(`Query param: ${param}`);
+    }
+    return z.object(shape);
+}
+
+/**
  * @param {Record<string, unknown>} args
  */
 function argsToQuery(args) {
@@ -126,7 +146,8 @@ export const MCP_DATA_TOOLS = [
     {
         name: "get_klaviyo_metrics",
         title: "Get Klaviyo metrics",
-        description: "Klaviyo email marketing metrics for a customer and date range.",
+        description:
+            "Klaviyo sent-campaign performance metrics (opens, clicks, conversions) for a date range. For planned campaigns use get_klaviyo_scheduled_campaigns; for flow setup use get_klaviyo_flows.",
         path: "/api/mcp/data/klaviyo",
     },
     {
@@ -437,6 +458,25 @@ export function registerApexTools(server, bearerToken) {
         );
     }
 
+    for (const tool of MCP_STANDALONE_ENDPOINT_TOOLS) {
+        server.registerTool(
+            tool.name,
+            {
+                title: tool.title,
+                description: tool.description,
+                inputSchema: buildStandaloneEndpointSchema(tool),
+            },
+            async (args) => {
+                try {
+                    const data = await apexGet(bearerToken, tool.path, argsToQuery(args));
+                    return jsonToolResult(data);
+                } catch (e) {
+                    return apexToolErrorResult(tool.name, e);
+                }
+            }
+        );
+    }
+
     server.registerTool(
         "list_proxy_routes",
         {
@@ -585,6 +625,7 @@ export function listMcpToolNames() {
         ...MCP_EXTENDED_CUSTOMER_RESOURCE_TOOLS.map((t) => t.name),
         ...MCP_GLOBAL_RESOURCE_TOOLS.map((t) => t.name),
         ...MCP_EXTENDED_GLOBAL_RESOURCE_TOOLS.map((t) => t.name),
+        ...MCP_STANDALONE_ENDPOINT_TOOLS.map((t) => t.name),
         ...MCP_PROXY_TOOLS.map((t) => t.name),
     ];
 }
