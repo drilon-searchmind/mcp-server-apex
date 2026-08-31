@@ -590,9 +590,13 @@ export function registerApexTools(server, bearerToken) {
         {
             title: "Meta ads read",
             description:
-                "Read-only Meta Graph API: endpoint = insights | campaigns | adsets | ads | accounts.",
+                "Read-only Meta Graph API: endpoint = insights | campaigns | adsets | ads | ads-with-creatives | ad-preview | accounts. Use ads-with-creatives for live ad thumbnails; ad-preview needs params.adId.",
             inputSchema: z.object({
-                endpoint: z.string().describe("insights, campaigns, adsets, ads, or accounts"),
+                endpoint: z
+                    .string()
+                    .describe(
+                        "insights, campaigns, adsets, ads, ads-with-creatives, ad-preview, or accounts"
+                    ),
                 customerId: z.string().describe("APEX customer MongoDB id"),
                 params: z
                     .record(z.string())

@@ -31,7 +31,7 @@ function createServer(bearerToken) {
   const server = new McpServer(
     {
       name: "mcp-server-apex",
-      version: "0.7.3",
+      version: "0.7.4",
     },
     {
       instructions:
