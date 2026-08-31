@@ -15,6 +15,35 @@ export const MCP_EXTENDED_DATA_TOOLS = [
     { name: "get_seo_insights", resource: "seo-insights", title: "Get SEO insights", description: "Full SEO insights bundle from Search Console.", needsDateRange: true, extraParams: ["compareStartDate", "compareEndDate", "siteUrl"] },
 ];
 
+/** Direct APEX MCP routes (not /data or /resources). v0.7.2 */
+export const MCP_STANDALONE_ENDPOINT_TOOLS = [
+    {
+        name: "get_klaviyo_scheduled_campaigns",
+        title: "Get Klaviyo scheduled campaigns",
+        description:
+            "Klaviyo planned email campaigns (scheduled, draft, preparing) with subjects and send dates. Use for campaign calendar / pipeline — not sent-campaign performance (use get_klaviyo_metrics for that). Requires Klaviyo campaigns:read scope.",
+        path: "/api/mcp/klaviyo-scheduled-campaigns",
+        extraParams: ["daysAhead", "includeDrafts"],
+    },
+    {
+        name: "get_klaviyo_flows",
+        title: "Get Klaviyo flows",
+        description:
+            "Klaviyo flow setup: triggers, delays, and email steps per flow. Use for automation strategy / best-practice review — not flow performance metrics. Requires Klaviyo flows:read scope.",
+        path: "/api/mcp/klaviyo-flows",
+        extraParams: ["includeActions", "status", "maxFlows"],
+    },
+    {
+        name: "get_weekly_audit",
+        title: "Get weekly audit",
+        description:
+            "Compact weekly audit JSON — blended KPIs, PPC/PS/SEO/EM summaries, top sellers (server-side aggregation).",
+        path: "/api/mcp/weekly-audit",
+        needsDateRange: true,
+        extraParams: ["compare", "periodStart", "periodEnd"],
+    },
+];
+
 export const MCP_EXTENDED_CUSTOMER_RESOURCE_TOOLS = [
     { name: "get_share_of_search", resource: "share-of-search", title: "Get share of search", description: "Saved share-of-search snapshots for a customer.", needsDateRange: false },
     { name: "get_data_wrapped", resource: "data-wrapped", title: "Get Data Wrapped", description: "Monthly Data Wrapped summary for a customer.", needsDateRange: false, extraParams: ["period"] },
