@@ -493,7 +493,7 @@ export function registerApexTools(server, bearerToken) {
         {
             title: "Shopify GraphQL / ShopifyQL read",
             description:
-                "Read-only Shopify via allowlisted queryType: SalesReport, OrdersReport, orders, products, shop, etc.",
+                "Read-only Shopify via allowlisted queryType. ShopifyQL: SalesReport, AgenticSalesReport, AgenticReferringReport, etc. GraphQL: orders, ordersAttribution, products, shop, etc. Use list_proxy_routes for the full catalog.",
             inputSchema: z.object({
                 queryType: z.string().describe("Allowlisted query type — see list_proxy_routes"),
                 customerId: z.string().describe("APEX customer MongoDB id"),

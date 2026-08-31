@@ -71,7 +71,7 @@ export const MCP_PROXY_TOOLS = [
         name: "shopify_graphql_read",
         title: "Shopify GraphQL / ShopifyQL read",
         description:
-            "Read-only Shopify Admin GraphQL or ShopifyQL via allowlisted query types (SalesReport, orders, products, etc.).",
+            "Read-only Shopify Admin GraphQL or ShopifyQL via allowlisted query types (SalesReport, AgenticSalesReport, ordersAttribution, etc.).",
         path: "/api/mcp/proxy/shopify",
         method: "POST",
         bodyKeys: ["queryType", "customerId", "params"],
