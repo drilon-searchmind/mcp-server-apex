@@ -320,7 +320,9 @@ export function registerApexTools(server, bearerToken) {
             try {
                 const data = await apexGet(
                     bearerToken,
-                    `/api/mcp/customers/${encodeURIComponent(customerId)}`
+                    `/api/mcp/customers/${encodeURIComponent(customerId)}`,
+                    {},
+                    { expectedCustomerId: customerId }
                 );
                 return jsonToolResult(data);
             } catch (e) {
@@ -403,7 +405,9 @@ export function registerApexTools(server, bearerToken) {
             async (args) => {
                 try {
                     const path = `/api/mcp/customers/${encodeURIComponent(args.customerId)}/resources/${tool.resource}`;
-                    const data = await apexGet(bearerToken, path, argsToQuery(args));
+                    const data = await apexGet(bearerToken, path, argsToQuery(args), {
+                        expectedCustomerId: String(args.customerId),
+                    });
                     return jsonToolResult(data);
                 } catch (e) {
                     return apexToolErrorResult(tool.name, e);

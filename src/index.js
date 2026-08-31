@@ -14,6 +14,10 @@ import { registerApexTools, listMcpToolNames } from "./tools.js";
 import { getLlmProviderStatus } from "./llmClient.js";
 import { MCP_LLM_TOOL_NAMES, registerLlmTools } from "./llmTools.js";
 import { getPublicBaseUrl, mountOAuthRoutes } from "./oauth.js";
+import {
+  clearSessionRequestQueue,
+  runSerializedForSession,
+} from "./sessionRequestQueue.js";
 
 const PORT = Number(process.env.PORT) || 3000;
 
@@ -27,7 +31,7 @@ function createServer(bearerToken) {
   const server = new McpServer(
     {
       name: "mcp-server-apex",
-      version: "0.7.2",
+      version: "0.7.3",
     },
     {
       instructions:
@@ -108,7 +112,9 @@ async function handleMcpPost(req, res) {
   try {
     if (sessionId && sessions.has(sessionId)) {
       const session = sessions.get(sessionId);
-      await session.transport.handleRequest(req, res, req.body);
+      await runSerializedForSession(sessionId, () =>
+        session.transport.handleRequest(req, res, req.body)
+      );
       return;
     }
 
@@ -125,6 +131,7 @@ async function handleMcpPost(req, res) {
         const id = transport.sessionId;
         if (id && sessions.has(id)) {
           sessions.delete(id);
+          clearSessionRequestQueue(id);
           console.error(`[mcp] session closed: ${id}`);
         }
       };
@@ -161,7 +168,9 @@ async function handleMcpGet(req, res) {
   }
 
   try {
-    await session.transport.handleRequest(req, res);
+    await runSerializedForSession(sessionId, () =>
+      session.transport.handleRequest(req, res)
+    );
   } catch (error) {
     console.error("[mcp] GET failed:", error);
     if (!res.headersSent) {
@@ -183,8 +192,11 @@ async function handleMcpDelete(req, res) {
   }
 
   try {
-    await session.transport.handleRequest(req, res);
+    await runSerializedForSession(sessionId, () =>
+      session.transport.handleRequest(req, res)
+    );
     sessions.delete(sessionId);
+    clearSessionRequestQueue(sessionId);
   } catch (error) {
     console.error("[mcp] DELETE failed:", error);
     if (!res.headersSent) {
@@ -228,7 +240,7 @@ app.get("/", (_req, res) => {
 
   res.json({
     name: "mcp-server-apex",
-    version: "0.7.2",
+    version: "0.7.3",
     status: "ok",
     mcpEndpoint: "/mcp",
     oauthDiscovery: "/.well-known/oauth-authorization-server",
