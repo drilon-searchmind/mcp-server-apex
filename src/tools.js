@@ -321,7 +321,9 @@ export function registerApexTools(server, bearerToken) {
             try {
                 const data = await apexGet(
                     bearerToken,
-                    `/api/mcp/customers/${encodeURIComponent(customerId)}`
+                    `/api/mcp/customers/${encodeURIComponent(customerId)}`,
+                    {},
+                    { expectedCustomerId: customerId }
                 );
                 return jsonToolResult(data);
             } catch (e) {
@@ -404,7 +406,9 @@ export function registerApexTools(server, bearerToken) {
             async (args) => {
                 try {
                     const path = `/api/mcp/customers/${encodeURIComponent(args.customerId)}/resources/${tool.resource}`;
-                    const data = await apexGet(bearerToken, path, argsToQuery(args));
+                    const data = await apexGet(bearerToken, path, argsToQuery(args), {
+                        expectedCustomerId: String(args.customerId),
+                    });
                     return jsonToolResult(data);
                 } catch (e) {
                     return apexToolErrorResult(tool.name, e);
@@ -634,7 +638,7 @@ export function registerApexTools(server, bearerToken) {
         {
             title: "Shopify GraphQL / ShopifyQL read",
             description:
-                "Read-only Shopify via allowlisted queryType: SalesReport, OrdersReport, orders, products, shop, etc.",
+                "Read-only Shopify via allowlisted queryType. ShopifyQL: SalesReport, AgenticSalesReport, AgenticReferringReport, etc. GraphQL: orders, ordersAttribution, products, shop, etc. Use list_proxy_routes for the full catalog.",
             inputSchema: z.object({
                 queryType: z.string().describe("Allowlisted query type — see list_proxy_routes"),
                 customerId: z.string().describe("APEX customer MongoDB id"),
@@ -687,9 +691,13 @@ export function registerApexTools(server, bearerToken) {
         {
             title: "Meta ads read",
             description:
-                "Read-only Meta Graph API: endpoint = insights | campaigns | adsets | ads | accounts.",
+                "Read-only Meta Graph API: endpoint = insights | campaigns | adsets | ads | ads-with-creatives | ad-preview | accounts. Use ads-with-creatives for live ad thumbnails; ad-preview needs params.adId.",
             inputSchema: z.object({
-                endpoint: z.string().describe("insights, campaigns, adsets, ads, or accounts"),
+                endpoint: z
+                    .string()
+                    .describe(
+                        "insights, campaigns, adsets, ads, ads-with-creatives, ad-preview, or accounts"
+                    ),
                 customerId: z.string().describe("APEX customer MongoDB id"),
                 params: z
                     .record(z.string())

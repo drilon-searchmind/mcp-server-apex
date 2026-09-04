@@ -2,6 +2,15 @@
 
 export const MCP_EXTENDED_DATA_TOOLS = [
     { name: "get_meta_ad_performance", resource: "meta-ad-performance", title: "Get Meta ad performance", description: "Ad-level Meta/Facebook performance metrics.", needsDateRange: true },
+    {
+        name: "get_meta_ad_creatives",
+        resource: "meta-ad-creatives",
+        title: "Get Meta ad creatives",
+        description:
+            "Live Meta/Facebook ads with creative thumbnail URLs for a quick visual overview (default ACTIVE ads only).",
+        needsDateRange: false,
+        extraParams: ["limit", "activeOnly"],
+    },
     { name: "get_google_ad_performance", resource: "google-ad-performance", title: "Get Google ad performance", description: "Ad-level Google Ads performance metrics.", needsDateRange: true },
     { name: "get_google_ppc_dashboard", resource: "google-ppc-dashboard", title: "Get Google PPC dashboard", description: "Full Google PPC dashboard payload.", needsDateRange: true },
     { name: "get_klaviyo_dashboard", resource: "klaviyo-dashboard", title: "Get Klaviyo dashboard", description: "Full Klaviyo EM dashboard with optional comparison period.", needsDateRange: true, extraParams: ["prevStartDate", "prevEndDate"] },
@@ -128,7 +137,7 @@ export const MCP_PROXY_TOOLS = [
         name: "shopify_graphql_read",
         title: "Shopify GraphQL / ShopifyQL read",
         description:
-            "Read-only Shopify Admin GraphQL or ShopifyQL via allowlisted query types (SalesReport, orders, products, etc.).",
+            "Read-only Shopify Admin GraphQL or ShopifyQL via allowlisted query types (SalesReport, AgenticSalesReport, ordersAttribution, etc.).",
         path: "/api/mcp/proxy/shopify",
         method: "POST",
         bodyKeys: ["queryType", "customerId", "params"],
@@ -146,7 +155,7 @@ export const MCP_PROXY_TOOLS = [
         name: "meta_ads_read",
         title: "Meta ads read",
         description:
-            "Read-only Meta Graph API proxy: insights, campaigns, adsets, ads, accounts.",
+            "Read-only Meta Graph API proxy: insights, campaigns, adsets, ads, ads-with-creatives, ad-preview, accounts.",
         path: "/api/mcp/proxy/meta",
         method: "POST",
         bodyKeys: ["endpoint", "customerId", "params"],
