@@ -7,6 +7,7 @@ import {
     MCP_EXTENDED_GLOBAL_RESOURCE_TOOLS,
     MCP_PROXY_TOOLS,
     MCP_STANDALONE_ENDPOINT_TOOLS,
+    MCP_STAPE_TOOLS,
 } from "./toolCatalog.js";
 
 const dateRangeSchema = {
@@ -478,6 +479,106 @@ export function registerApexTools(server, bearerToken) {
     }
 
     server.registerTool(
+        "start_stape_tracking_check",
+        {
+            title: "Start Stape tracking check",
+            description: MCP_STAPE_TOOLS[0].description,
+            inputSchema: z
+                .object({
+                    customerId: z
+                        .string()
+                        .optional()
+                        .describe(
+                            "APEX customer MongoDB id — site URL from Shopify URL or Search Console property"
+                        ),
+                    siteUrl: z
+                        .string()
+                        .optional()
+                        .describe("Site to scan e.g. https://example.com"),
+                })
+                .superRefine((data, ctx) => {
+                    if (!String(data.customerId || "").trim() && !String(data.siteUrl || "").trim()) {
+                        ctx.addIssue({
+                            code: z.ZodIssueCode.custom,
+                            message: "customerId or siteUrl is required",
+                        });
+                    }
+                }),
+        },
+        async ({ customerId, siteUrl }) => {
+            try {
+                const body = {};
+                if (String(customerId || "").trim()) body.customerId = String(customerId).trim();
+                if (String(siteUrl || "").trim()) body.siteUrl = String(siteUrl).trim();
+                const data = await apexPost(bearerToken, "/api/mcp/stape-tracking-checker", body);
+                return jsonToolResult(data);
+            } catch (e) {
+                return apexToolErrorResult("start_stape_tracking_check", e);
+            }
+        }
+    );
+
+    server.registerTool(
+        "get_stape_tracking_check",
+        {
+            title: "Get Stape tracking check result",
+            description: MCP_STAPE_TOOLS[1].description,
+            inputSchema: z.object({
+                jobId: z.string().describe("Job id from start_stape_tracking_check"),
+                waitMs: z
+                    .number()
+                    .int()
+                    .min(0)
+                    .max(130_000)
+                    .optional()
+                    .describe("Block up to this many ms waiting for completion (max 130000)"),
+                waitSeconds: z
+                    .number()
+                    .int()
+                    .min(0)
+                    .max(130)
+                    .optional()
+                    .describe("Alternative to waitMs — seconds to block (max 130)"),
+            }),
+        },
+        async ({ jobId, waitMs, waitSeconds }) => {
+            try {
+                const wait =
+                    waitMs != null
+                        ? waitMs
+                        : waitSeconds != null
+                          ? waitSeconds * 1000
+                          : undefined;
+                const data = await apexGet(
+                    bearerToken,
+                    `/api/mcp/stape-tracking-checker/${encodeURIComponent(jobId)}`,
+                    wait != null ? { waitMs: String(wait) } : {}
+                );
+                return jsonToolResult(data);
+            } catch (e) {
+                return apexToolErrorResult("get_stape_tracking_check", e);
+            }
+        }
+    );
+
+    server.registerTool(
+        "get_stape_tracking_check_limit",
+        {
+            title: "Get Stape tracking check limit",
+            description: MCP_STAPE_TOOLS[2].description,
+            inputSchema: z.object({}),
+        },
+        async () => {
+            try {
+                const data = await apexGet(bearerToken, "/api/mcp/stape-tracking-checker");
+                return jsonToolResult(data);
+            } catch (e) {
+                return apexToolErrorResult("get_stape_tracking_check_limit", e);
+            }
+        }
+    );
+
+    server.registerTool(
         "list_proxy_routes",
         {
             title: "List proxy routes",
@@ -626,6 +727,7 @@ export function listMcpToolNames() {
         ...MCP_GLOBAL_RESOURCE_TOOLS.map((t) => t.name),
         ...MCP_EXTENDED_GLOBAL_RESOURCE_TOOLS.map((t) => t.name),
         ...MCP_STANDALONE_ENDPOINT_TOOLS.map((t) => t.name),
+        ...MCP_STAPE_TOOLS.map((t) => t.name),
         ...MCP_PROXY_TOOLS.map((t) => t.name),
     ];
 }

@@ -244,6 +244,20 @@ Guardrails: `customerId` required, no writes, rate limit 60/min/customer, audit 
 
 ---
 
+## Stape tracking checker (v0.7.4)
+
+Async website tracking audit via Stape Partner API. APEX stores jobs and receives webhook callbacks.
+
+| MCP tool | APEX endpoint | Notes |
+|----------|---------------|-------|
+| `start_stape_tracking_check` | `POST /api/mcp/stape-tracking-checker` | Body: `{ customerId? }` and/or `{ siteUrl? }`. Returns `{ jobId, status, siteUrl, … }`. |
+| `get_stape_tracking_check` | `GET /api/mcp/stape-tracking-checker/{jobId}?waitMs=` | Poll result. `waitMs` up to 130000 blocks until complete. |
+| `get_stape_tracking_check_limit` | `GET /api/mcp/stape-tracking-checker` | Monthly Stape API quota. |
+
+**Typical flow:** `start_stape_tracking_check` → `get_stape_tracking_check` with `waitMs: 120000`.
+
+---
+
 ## Admin (APEX UI only)
 
 | Location | Purpose |

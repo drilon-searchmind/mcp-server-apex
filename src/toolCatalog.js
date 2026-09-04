@@ -44,6 +44,34 @@ export const MCP_STANDALONE_ENDPOINT_TOOLS = [
     },
 ];
 
+/** Stape Website Tracking Checker (async webhook). v0.7.4 */
+export const MCP_STAPE_TOOLS = [
+    {
+        name: "start_stape_tracking_check",
+        title: "Start Stape tracking check",
+        description:
+            "Start an async Stape Website Tracking Checker scan. Returns jobId with status pending. Stape callbacks APEX (up to ~2 min). Pass customerId (uses Shopify URL / Search Console property) and/or siteUrl. Then call get_stape_tracking_check with the jobId.",
+        method: "POST",
+        path: "/api/mcp/stape-tracking-checker",
+    },
+    {
+        name: "get_stape_tracking_check",
+        title: "Get Stape tracking check result",
+        description:
+            "Poll a Stape tracking check job by jobId from start_stape_tracking_check. Optional waitMs (max 130000) blocks until complete or timeout. Returns status pending|complete|failed plus summary/result when done.",
+        method: "GET",
+        path: "/api/mcp/stape-tracking-checker/{jobId}",
+    },
+    {
+        name: "get_stape_tracking_check_limit",
+        title: "Get Stape tracking check limit",
+        description:
+            "Remaining Stape Partner Tracking Checker API quota for this month (1000/month partner limit).",
+        method: "GET",
+        path: "/api/mcp/stape-tracking-checker",
+    },
+];
+
 export const MCP_EXTENDED_CUSTOMER_RESOURCE_TOOLS = [
     { name: "get_share_of_search", resource: "share-of-search", title: "Get share of search", description: "Saved share-of-search snapshots for a customer.", needsDateRange: false },
     { name: "get_data_wrapped", resource: "data-wrapped", title: "Get Data Wrapped", description: "Monthly Data Wrapped summary for a customer.", needsDateRange: false, extraParams: ["period"] },

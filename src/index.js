@@ -27,7 +27,7 @@ function createServer(bearerToken) {
   const server = new McpServer(
     {
       name: "mcp-server-apex",
-      version: "0.7.2",
+      version: "0.7.4",
     },
     {
       instructions:
@@ -228,7 +228,7 @@ app.get("/", (_req, res) => {
 
   res.json({
     name: "mcp-server-apex",
-    version: "0.7.2",
+    version: "0.7.4",
     status: "ok",
     mcpEndpoint: "/mcp",
     oauthDiscovery: "/.well-known/oauth-authorization-server",
