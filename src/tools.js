@@ -127,6 +127,12 @@ export const MCP_DATA_TOOLS = [
         path: "/api/mcp/data/pinterest",
     },
     {
+        name: "get_linkedin_ads",
+        title: "Get LinkedIn ads",
+        description: "LinkedIn ad metrics for a customer and date range.",
+        path: "/api/mcp/data/linkedin",
+    },
+    {
         name: "get_snapchat_ads",
         title: "Get Snapchat ads",
         description: "Snapchat ad metrics for a customer and date range.",

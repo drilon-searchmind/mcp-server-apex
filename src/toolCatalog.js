@@ -15,6 +15,7 @@ export const MCP_EXTENDED_DATA_TOOLS = [
     { name: "get_google_ppc_dashboard", resource: "google-ppc-dashboard", title: "Get Google PPC dashboard", description: "Full Google PPC dashboard payload.", needsDateRange: true },
     { name: "get_klaviyo_dashboard", resource: "klaviyo-dashboard", title: "Get Klaviyo dashboard", description: "Full Klaviyo EM dashboard with optional comparison period.", needsDateRange: true, extraParams: ["prevStartDate", "prevEndDate"] },
     { name: "get_pinterest_dashboard", resource: "pinterest-dashboard", title: "Get Pinterest dashboard", description: "Full Pinterest dashboard payload.", needsDateRange: true },
+    { name: "get_linkedin_dashboard", resource: "linkedin-dashboard", title: "Get LinkedIn dashboard", description: "Full LinkedIn ads dashboard payload.", needsDateRange: true },
     { name: "get_snapchat_dashboard", resource: "snapchat-dashboard", title: "Get Snapchat dashboard", description: "Full Snapchat dashboard payload.", needsDateRange: true },
     { name: "get_reddit_dashboard", resource: "reddit-dashboard", title: "Get Reddit dashboard", description: "Full Reddit dashboard payload.", needsDateRange: true },
     { name: "get_bing_dashboard", resource: "bing-dashboard", title: "Get Bing dashboard", description: "Full Microsoft/Bing ads dashboard payload.", needsDateRange: true },
