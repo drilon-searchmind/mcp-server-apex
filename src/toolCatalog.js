@@ -13,7 +13,15 @@ export const MCP_EXTENDED_DATA_TOOLS = [
     },
     { name: "get_google_ad_performance", resource: "google-ad-performance", title: "Get Google ad performance", description: "Ad-level Google Ads performance metrics.", needsDateRange: true },
     { name: "get_google_ppc_dashboard", resource: "google-ppc-dashboard", title: "Get Google PPC dashboard", description: "Full Google PPC dashboard payload.", needsDateRange: true },
-    { name: "get_klaviyo_dashboard", resource: "klaviyo-dashboard", title: "Get Klaviyo dashboard", description: "Full Klaviyo EM dashboard with optional comparison period.", needsDateRange: true, extraParams: ["prevStartDate", "prevEndDate"] },
+    {
+        name: "get_klaviyo_dashboard",
+        resource: "klaviyo-dashboard",
+        title: "Get Klaviyo dashboard",
+        description:
+            "Klaviyo campaign + flow performance dashboard. part=summary (campaign KPIs), daily (flow time series), or all (default). Optional comparison period.",
+        needsDateRange: true,
+        extraParams: ["prevStartDate", "prevEndDate", "part"],
+    },
     { name: "get_pinterest_dashboard", resource: "pinterest-dashboard", title: "Get Pinterest dashboard", description: "Full Pinterest dashboard payload.", needsDateRange: true },
     { name: "get_linkedin_dashboard", resource: "linkedin-dashboard", title: "Get LinkedIn dashboard", description: "Full LinkedIn ads dashboard payload.", needsDateRange: true },
     { name: "get_snapchat_dashboard", resource: "snapchat-dashboard", title: "Get Snapchat dashboard", description: "Full Snapchat dashboard payload.", needsDateRange: true },
@@ -39,9 +47,41 @@ export const MCP_STANDALONE_ENDPOINT_TOOLS = [
         name: "get_klaviyo_flows",
         title: "Get Klaviyo flows",
         description:
-            "Klaviyo flow setup: triggers, delays, and email steps per flow. Use for automation strategy / best-practice review — not flow performance metrics. Requires Klaviyo flows:read scope.",
+            "Klaviyo flow structure (triggers, delays, splits, emails with template IDs) via flow definition API. For per-message performance use get_klaviyo_flow_message_performance. Requires flows:read.",
         path: "/api/mcp/klaviyo-flows",
         extraParams: ["includeActions", "status", "maxFlows"],
+    },
+    {
+        name: "get_klaviyo_flow_message_performance",
+        title: "Get Klaviyo flow message performance",
+        description:
+            "Flow email performance per message (recipients, opens, clicks, conversions, revenue per recipient) via Klaviyo flow-values-reports. Optional flowId filter. Requires flows:read and metrics:read.",
+        path: "/api/mcp/klaviyo-flow-performance",
+        needsDateRange: true,
+        extraParams: ["flowId"],
+    },
+    {
+        name: "get_klaviyo_event_schema",
+        title: "Get Klaviyo event schema",
+        description:
+            "Metric catalog for the account plus sample events and event property keys for key metrics. Requires metrics:read and events:read.",
+        path: "/api/mcp/klaviyo-event-schema",
+        extraParams: ["sampleEventsPerMetric", "maxMetrics"],
+    },
+    {
+        name: "get_klaviyo_account_settings",
+        title: "Get Klaviyo account settings",
+        description:
+            "Account timezone/currency, Placed Order conversion metric id used by APEX reporting, and attribution API limitations note. Requires accounts:read.",
+        path: "/api/mcp/klaviyo-account-settings",
+    },
+    {
+        name: "get_klaviyo_lists_segments",
+        title: "Get Klaviyo lists and segments",
+        description:
+            "Lists and segments with optional profile_count sizes (slower; Klaviyo rate limits apply). Requires lists:read and segments:read.",
+        path: "/api/mcp/klaviyo-lists-segments",
+        extraParams: ["maxLists", "maxSegments", "includeProfileCounts"],
     },
     {
         name: "get_weekly_audit",
