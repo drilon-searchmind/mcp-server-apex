@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { apexGet, apexPost, apexToolErrorResult, jsonToolResult } from "./apexClient.js";
+import { buildCallApexApiPostBody } from "./apexProxyBody.js";
 import {
     MCP_EXTENDED_CUSTOMER_RESOURCE_TOOLS,
     MCP_EXTENDED_DATA_TOOLS,
@@ -627,11 +628,8 @@ export function registerApexTools(server, bearerToken) {
         },
         async ({ route, customerId, params }) => {
             try {
-                const data = await apexPost(bearerToken, "/api/mcp/proxy/apex", {
-                    route,
-                    customerId,
-                    params: params || {},
-                });
+                const body = buildCallApexApiPostBody({ route, customerId, params });
+                const data = await apexPost(bearerToken, "/api/mcp/proxy/apex", body);
                 return jsonToolResult(data);
             } catch (e) {
                 return apexToolErrorResult("call_apex_api", e);
